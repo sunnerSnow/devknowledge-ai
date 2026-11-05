@@ -1,8 +1,8 @@
 -- DevKnowledge AI Phase 0／1：帳號、知識庫核心、個人學習進度、AI 使用量
 --
 -- 設計重點：
--- * 全部放在 dk schema：Supabase 的 Data API 只公開 public，這些表不會被前端直接讀寫，
---   一律經過伺服器的服務層。
+-- * 全部放在 dk schema（不在 public）：這些表不會被前端直接讀寫，一律經過伺服器的服務層。
+--   帳號在 auth schema（20261104000000_auth.sql，Better Auth）。
 -- * 知識節點、內容與關聯是「共用資料」：登入使用者都能讀，寫入只由伺服器（表的擁有者）進行，
 --   authenticated 角色沒有 insert／update／delete 權限。
 -- * 個人資料（profiles、user_knowledge_progress、ai_usage）帶 user_id，RLS 只認 user_id = auth.uid()。

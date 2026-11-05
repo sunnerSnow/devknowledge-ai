@@ -247,13 +247,6 @@ export async function getKnowledge(db: Db, userId: string, slugOrId: string): Pr
       .where(and(eq(knowledgeRelations.toNodeId, row.id), eq(knowledgeRelations.relationType, "prerequisite")))
       .orderBy(knowledgeNodes.name);
 
-    // 記最後瀏覽時間（沒有進度列就建一列 not_started）
-    const now = new Date().toISOString();
-    await tx
-      .insert(userKnowledgeProgress)
-      .values({ userId, knowledgeNodeId: row.id, status: "not_started", lastViewedAt: now })
-      .onConflictDoUpdate({ target: [userKnowledgeProgress.userId, userKnowledgeProgress.knowledgeNodeId], set: { lastViewedAt: now } });
-
     const content = latest ? knowledgeContentSchema.safeParse(latest.content) : null;
     const relNode = (r: (typeof outgoing)[number] | (typeof neededBy)[number]) => ({
       id: r.id,
@@ -266,7 +259,7 @@ export async function getKnowledge(db: Db, userId: string, slugOrId: string): Pr
 
     return {
       ...toSummary(row),
-      // 上面已經建立進度列，所以第一次瀏覽也回 not_started
+      // 沒有進度列就視為未學習（進度列由 markViewed／setProgress 建立）
       progress: row.progressStatus ? { status: row.progressStatus, confidence: row.progressConfidence } : { status: "not_started", confidence: null },
       aliases: row.aliases,
       // 舊版內容若不符現在的 schema（prompt 版本演進），當成沒有內容，頁面不會崩潰
@@ -276,8 +269,26 @@ export async function getKnowledge(db: Db, userId: string, slugOrId: string): Pr
         : null,
       relations: outgoing.map((r) => ({ type: r.type, reason: r.reason, node: relNode(r) })),
       neededBy: neededBy.map(relNode),
-      lastViewedAt: row.lastViewedAt ?? now,
+      lastViewedAt: row.lastViewedAt,
     };
+  });
+}
+
+/**
+ * 記最後瀏覽時間（沒有進度列就建一列 not_started）。
+ * 刻意不放在 getKnowledge 裡：Next.js 會預先抓取畫面上的連結，查詢不能有副作用；
+ * 由知識頁掛載後的 client 元件呼叫（預抓不會執行 client effect）。
+ */
+export async function markViewed(db: Db, userId: string, nodeId: string): Promise<void> {
+  if (!isUuid(nodeId)) throw notFound("這個知識頁");
+  await withUser(db, userId, async (tx) => {
+    const [node] = await tx.select({ id: knowledgeNodes.id }).from(knowledgeNodes).where(eq(knowledgeNodes.id, nodeId)).limit(1);
+    if (!node) throw notFound("這個知識頁");
+    const now = new Date().toISOString();
+    await tx
+      .insert(userKnowledgeProgress)
+      .values({ userId, knowledgeNodeId: nodeId, status: "not_started", lastViewedAt: now })
+      .onConflictDoUpdate({ target: [userKnowledgeProgress.userId, userKnowledgeProgress.knowledgeNodeId], set: { lastViewedAt: now } });
   });
 }
 

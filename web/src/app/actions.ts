@@ -1,17 +1,19 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { APIError } from "better-auth";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logError } from "@/lib/api/http";
-import { LOCAL_SESSION_COOKIE, LOCAL_USERS } from "@/lib/auth/local-users";
+import { getAuth } from "@/lib/auth/better-auth";
+import { LOCAL_USERS } from "@/lib/auth/local-users";
 import { getSessionUser } from "@/lib/auth/session";
-import { createSupabaseServerClient } from "@/lib/auth/supabase";
 import { isLocalMode } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
-import { setProgress } from "@/lib/services/knowledge";
+import { markViewed, setProgress } from "@/lib/services/knowledge";
 import { updateProfile } from "@/lib/services/profiles";
+import { clientIp, consumeRateLimit } from "@/lib/services/rate-limit";
 import { type Credentials, credentialsSchema } from "@/lib/validation/auth";
 
 /**
@@ -38,43 +40,72 @@ async function sessionOrRedirect() {
 }
 
 // ---------------------------------------------------------------------------
-// 登入
+// 登入（Better Auth；nextCookies plugin 會把 session cookie 寫進回應）
 // ---------------------------------------------------------------------------
 
-export async function loginLocalAction(formData: FormData): Promise<void> {
-  if (!isLocalMode()) redirect("/login");
-  const key = formData.get("user");
-  const user = LOCAL_USERS.find((u) => u.key === key);
-  if (!user) redirect("/login");
-  (await cookies()).set(LOCAL_SESSION_COOKIE, user.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
-  redirect("/");
+/** Better Auth 的錯誤碼 → 使用者看得懂的訊息；不洩漏帳號是否存在 */
+function authErrorMessage(error: unknown, intent: "signin" | "signup"): string {
+  if (error instanceof APIError) {
+    const code = error.body?.code ?? "";
+    if (intent === "signup" && /ALREADY_EXISTS/.test(code)) return "這個 Email 已經註冊過，請直接登入";
+    if (intent === "signin" && (/INVALID_EMAIL_OR_PASSWORD|USER_NOT_FOUND|INVALID_PASSWORD/.test(code) || error.status === "UNAUTHORIZED")) return "Email 或密碼不正確";
+    if (/PASSWORD_TOO_SHORT|PASSWORD_TOO_LONG/.test(code)) return "密碼長度需為 8–72 個字元";
+    if (error.status === "TOO_MANY_REQUESTS") return "嘗試次數太多，請稍後再試";
+    logError(error);
+    return intent === "signup" ? "註冊失敗，請稍後再試" : "登入失敗，請稍後再試";
+  }
+  logError(error);
+  return "系統發生錯誤，請稍後再試";
 }
 
-export async function loginSupabaseAction(intent: "signin" | "signup", input: Credentials): Promise<ActionState> {
-  if (isLocalMode()) return { error: "本機示範模式請選擇示範使用者登入" };
+/** 限流：每個 IP 每 10 分鐘 30 次、每個 Email 每 15 分鐘 10 次（登入與註冊合計；失敗也算） */
+async function allowLoginAttempt(requestHeaders: Headers, email: string): Promise<boolean> {
+  const db = await getDb();
+  const ipOk = await consumeRateLimit(db, `login:ip:${clientIp(requestHeaders)}`, 30, 600);
+  const emailOk = await consumeRateLimit(db, `login:email:${email.toLowerCase()}`, 10, 900);
+  return ipOk && emailOk;
+}
+
+export async function loginAction(intent: "signin" | "signup", input: Credentials): Promise<ActionState> {
   const parsed = credentialsSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message, fieldErrors: Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])) };
   }
-  const supabase = await createSupabaseServerClient();
-  if (intent === "signup") {
-    const origin = (await headers()).get("origin") ?? "";
-    const { data, error } = await supabase.auth.signUp({ ...parsed.data, options: { emailRedirectTo: `${origin}/auth/callback` } });
-    if (error) return { error: `註冊失敗：${error.message}` };
-    if (!data.session) return { done: true };
-  } else {
-    const { error } = await supabase.auth.signInWithPassword(parsed.data);
-    if (error) return { error: "Email 或密碼不正確" };
+  const requestHeaders = await headers();
+  if (!(await allowLoginAttempt(requestHeaders, parsed.data.email))) return { error: "嘗試次數太多，請 10 分鐘後再試" };
+  const auth = await getAuth();
+  try {
+    if (intent === "signup") {
+      const name = parsed.data.name?.trim() || parsed.data.email.split("@")[0];
+      await auth.api.signUpEmail({ body: { email: parsed.data.email, password: parsed.data.password, name }, headers: requestHeaders });
+    } else {
+      await auth.api.signInEmail({ body: { email: parsed.data.email, password: parsed.data.password }, headers: requestHeaders });
+    }
+  } catch (error) {
+    return { error: authErrorMessage(error, intent) };
   }
   redirect("/");
 }
 
+/** 本機示範模式：一鍵以示範使用者登入 */
+export async function loginLocalAction(formData: FormData): Promise<void> {
+  if (!isLocalMode()) redirect("/login");
+  const user = LOCAL_USERS.find((u) => u.key === formData.get("user"));
+  if (!user) redirect("/login");
+  const requestHeaders = await headers();
+  if (!(await allowLoginAttempt(requestHeaders, user.email))) redirect("/login");
+  const auth = await getAuth();
+  await auth.api.signInEmail({ body: { email: user.email, password: user.password }, headers: requestHeaders });
+  redirect("/");
+}
+
 export async function logoutAction(): Promise<void> {
-  if (isLocalMode()) {
-    (await cookies()).delete(LOCAL_SESSION_COOKIE);
-  } else {
-    const supabase = await createSupabaseServerClient();
-    await supabase.auth.signOut();
+  const auth = await getAuth();
+  try {
+    await auth.api.signOut({ headers: await headers() });
+  } catch (error) {
+    // 沒有 session 也算登出成功
+    if (!(error instanceof APIError)) logError(error);
   }
   redirect("/login");
 }
@@ -82,6 +113,17 @@ export async function logoutAction(): Promise<void> {
 // ---------------------------------------------------------------------------
 // 知識進度
 // ---------------------------------------------------------------------------
+
+/** 知識頁掛載後記錄瀏覽（Dashboard 的「最近瀏覽」用） */
+export async function markViewedAction(nodeId: string): Promise<void> {
+  const user = await getSessionUser();
+  if (!user) return;
+  try {
+    await markViewed(await getDb(), user.id, nodeId);
+  } catch (error) {
+    logError(error);
+  }
+}
 
 export async function setProgressAction(nodeId: string, slug: string, status: string): Promise<ActionState> {
   const user = await sessionOrRedirect();

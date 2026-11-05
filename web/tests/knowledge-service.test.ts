@@ -10,6 +10,7 @@ import {
   getKnowledge,
   getProgressStats,
   listRecentKnowledge,
+  markViewed,
   searchKnowledge,
   setProgress,
 } from "@/lib/services/knowledge";
@@ -237,14 +238,20 @@ describe("進度", () => {
     await expectAppError(setProgress(db, alice, "not-a-uuid", { status: "learning" }), 404);
   });
 
-  it("最近瀏覽依本人瀏覽時間排序", async () => {
-    await generateKnowledge(db, alice, { topic: "RAG" }, deps);
-    await generateKnowledge(db, alice, { topic: "Docker" }, deps);
-    expect(await listRecentKnowledge(db, bob)).toEqual([]);
+  it("最近瀏覽依本人瀏覽時間排序；單純查詢不算瀏覽", async () => {
+    const rag = await generateKnowledge(db, alice, { topic: "RAG" }, deps);
+    const docker = await generateKnowledge(db, alice, { topic: "Docker" }, deps);
     await getKnowledge(db, bob, "docker");
+    expect(await listRecentKnowledge(db, bob)).toEqual([]);
+    await markViewed(db, bob, docker.node.id);
     await new Promise((r) => setTimeout(r, 5));
-    await getKnowledge(db, bob, "rag");
+    await markViewed(db, bob, rag.node.id);
     expect((await listRecentKnowledge(db, bob)).map((n) => n.slug)).toEqual(["rag", "docker"]);
+    // 再看一次 docker 會排到前面；狀態不變
+    await markViewed(db, bob, docker.node.id);
+    expect((await listRecentKnowledge(db, bob)).map((n) => n.slug)).toEqual(["docker", "rag"]);
+    expect((await getKnowledge(db, bob, "docker")).progress).toEqual({ status: "not_started", confidence: null });
+    await expectAppError(markViewed(db, bob, "00000000-0000-4000-8000-000000000099"), 404);
   });
 
   it("找不到的知識頁回 404", async () => {

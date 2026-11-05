@@ -2,30 +2,29 @@ import { GEMINI_THINKING_LEVELS, type GeminiThinking, isGeminiThinking } from "@
 
 /**
  * 執行模式：
- * - Supabase 模式：NEXT_PUBLIC_SUPABASE_URL ＋ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY（或舊版 ANON_KEY）＋ DATABASE_URL 都有設
- * - 本機示範模式：三者都沒設；資料存在本機 PGlite，登入改成選示範使用者
- * 只設一半視為設定錯誤，避免「以為連到正式資料庫，其實寫進本機」。
+ * - Postgres 模式：有 DATABASE_URL（正式環境用 Neon；也可以是任何 Postgres）
+ * - 本機示範模式：沒有 DATABASE_URL；資料存在本機 PGlite，登入頁多了一鍵登入的示範使用者
+ * 正式環境（NODE_ENV=production）沒設 DATABASE_URL 會直接報錯，不會默默改用本機資料庫。
  */
-export function supabaseEnv(): { url: string; key: string } | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return url && key ? { url, key } : null;
-}
-
 export function isLocalMode(): boolean {
-  const hasSupabase = supabaseEnv() !== null;
-  const hasDb = Boolean(process.env.DATABASE_URL);
-  const hasAnySupabase = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
-  if (hasSupabase && hasDb) return false;
-  if (hasAnySupabase || hasDb) {
-    throw new Error("設定不完整：Supabase 金鑰與 DATABASE_URL 必須一起設定（或都不設，使用本機示範模式）");
-  }
+  if (process.env.DATABASE_URL) return false;
   if (process.env.NODE_ENV === "production" && process.env.DK_LOCAL_MODE !== "1") {
-    throw new Error("正式環境必須設定 Supabase 與 DATABASE_URL；本機用 next start 示範時請設 DK_LOCAL_MODE=1");
+    throw new Error("正式環境必須設定 DATABASE_URL；本機用 next start 示範時請設 DK_LOCAL_MODE=1");
   }
   return true;
+}
+
+/** Better Auth 的密鑰與網址；只有開發模式的本機示範允許省略（用固定的開發用密鑰），production 一律要設 */
+export function authEnv(): { secret: string; baseURL: string | undefined } {
+  const secret = process.env.BETTER_AUTH_SECRET?.trim();
+  if (secret && secret.length < 32) throw new Error("BETTER_AUTH_SECRET 至少 32 個字元（可用 openssl rand -base64 32 產生）");
+  if (!secret && (!isLocalMode() || process.env.NODE_ENV === "production")) {
+    throw new Error("必須設定 BETTER_AUTH_SECRET（至少 32 個字元）；只有 next dev 的本機示範模式可以省略");
+  }
+  return {
+    secret: secret ?? "dk-local-demo-secret-not-for-production-0000000000",
+    baseURL: process.env.BETTER_AUTH_URL?.trim() || undefined,
+  };
 }
 
 export type AiProviderName = "mock" | "gemini";
@@ -51,7 +50,7 @@ export function aiEnv(): AiEnv {
     throw new Error("AI_PROVIDER=gemini 需要設定 GEMINI_API_KEY（https://aistudio.google.com）");
   }
   const thinking = (process.env.GEMINI_THINKING || "low").trim();
-  if (!isGeminiThinking(thinking)) {
+  if (provider === "gemini" && !isGeminiThinking(thinking)) {
     throw new Error(`GEMINI_THINKING 只能是 ${GEMINI_THINKING_LEVELS.join("、")}（目前：${thinking}）`);
   }
   const fallbackRaw = process.env.GEMINI_FALLBACK_MODEL;
@@ -62,7 +61,7 @@ export function aiEnv(): AiEnv {
     // 2026-11-05 實測：3.8-flash 在免費方案常過載或超過 100 秒；3.6-flash 約 12 秒完成
     model: process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash",
     fallbackModel: fallbackRaw === undefined ? "gemini-3.5-flash-lite" : fallbackRaw.trim() || null,
-    thinking,
+    thinking: isGeminiThinking(thinking) ? thinking : "low",
     hourlyLimit: Number.isFinite(hourlyLimit) && hourlyLimit > 0 ? Math.floor(hourlyLimit) : 20,
   };
 }

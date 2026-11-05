@@ -2,36 +2,31 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
-import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { schema } from "@/lib/db/schema";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-const ROOT = process.cwd();
+export const MIGRATIONS_DIR = path.join(process.cwd(), "db", "migrations");
+
+/** 依檔名順序列出 migration（檔名以時間戳開頭，auth 在 init 之前） */
+export async function listMigrations(): Promise<{ file: string; sql: string }[]> {
+  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
+  return Promise.all(files.map(async (file) => ({ file, sql: await readFile(path.join(MIGRATIONS_DIR, file), "utf8") })));
+}
 
 /** 建立 PGlite（本機示範或測試）；migration 用到 pg_trgm，所以要先載入擴充 */
 export function createPGlite(dataDir?: string, options: Omit<PGliteOptions, "dataDir" | "extensions"> = {}): PGlite {
   return new PGlite({ ...options, dataDir, extensions: { pg_trgm } });
 }
 
-/** 本機（PGlite）：先建 auth 模擬，再依序跑所有 migration（migration 本身可重複執行） */
+/** 本機（PGlite）：依序跑所有 migration（migration 本身可重複執行） */
 export async function bootstrapLocal(client: PGlite): Promise<void> {
-  await client.exec(await readFile(path.join(ROOT, "supabase", "local", "auth_stub.sql"), "utf8"));
-  const dir = path.join(ROOT, "supabase", "migrations");
-  const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
-  for (const file of files) {
-    await client.exec(await readFile(path.join(dir, file), "utf8"));
-  }
+  for (const m of await listMigrations()) await client.exec(m.sql);
 }
 
 export async function openLocalDb(client: PGlite): Promise<Db> {
   await bootstrapLocal(client);
   return drizzle(client, { schema }) as unknown as Db;
-}
-
-/** 本機示範模式：在模擬的 auth.users 建一個使用者（Supabase 上由 Auth 負責） */
-export async function ensureLocalAuthUser(db: Db, id: string, email: string): Promise<void> {
-  await db.execute(sql`insert into auth.users (id, email) values (${id}, ${email}) on conflict (id) do nothing`);
 }

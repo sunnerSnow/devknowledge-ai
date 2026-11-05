@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/lib/db/local";
-import { profiles } from "@/lib/db/schema";
+import { profiles, users } from "@/lib/db/schema";
 import { withService, withUser } from "@/lib/db/with-user";
 import { issuesFromZod, validationFailed } from "@/lib/errors";
 
@@ -13,13 +13,29 @@ export interface Profile {
   weeklyLearningMinutes: number;
 }
 
-/** 第一次登入時建立 profile（以伺服器身分：此時還沒有可用的 RLS 身分） */
-export async function ensureProfile(db: Db, userId: string, email: string | null): Promise<void> {
-  await withService(db, (tx) => tx.insert(profiles).values({ id: userId, email }).onConflictDoNothing({ target: profiles.id }));
+/** 第一次登入時建立 profile（以伺服器身分：此時還沒有可用的 RLS 身分）；顯示名稱預設用註冊時的名字 */
+export async function ensureProfile(db: Db, userId: string, email: string | null, displayName: string | null = null): Promise<void> {
+  await withService(db, (tx) =>
+    tx
+      .insert(profiles)
+      .values({ id: userId, email, displayName: displayName?.trim().slice(0, 60) || null })
+      .onConflictDoNothing({ target: profiles.id }),
+  );
 }
 
+/**
+ * 取得個人資料。profile 平常在註冊時由 Better Auth 的 hook 建立；
+ * 若當時失敗（例如資料庫暫時斷線），這裡會補建一列，流程不會永遠卡住。
+ */
 export async function getProfile(db: Db, userId: string): Promise<Profile | null> {
-  const row = await withUser(db, userId, (tx) => tx.query.profiles.findFirst({ where: eq(profiles.id, userId) }));
+  const read = () => withUser(db, userId, (tx) => tx.query.profiles.findFirst({ where: eq(profiles.id, userId) }));
+  let row = await read();
+  if (!row) {
+    const [user] = await withService(db, (tx) => tx.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, userId)).limit(1));
+    if (!user) return null;
+    await ensureProfile(db, userId, user.email, user.name);
+    row = await read();
+  }
   return row ? toProfile(row) : null;
 }
 

@@ -40,7 +40,7 @@ export default async function SettingsPage() {
           <CardContent className="grid gap-3 text-sm">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
               <dt className="text-muted-foreground">資料庫</dt>
-              <dd>{isLocalMode() ? "本機示範（PGlite）" : "Supabase"}</dd>
+              <dd>{isLocalMode() ? "本機示範（PGlite）" : "Postgres（Neon）"}</dd>
               <dt className="text-muted-foreground">AI provider</dt>
               <dd>
                 {ai.provider}

@@ -6,6 +6,7 @@ import { articleSections, KnowledgeArticle } from "@/components/knowledge/knowle
 import { CategoryBadge, ProgressBadge } from "@/components/knowledge/progress-badge";
 import { ProgressControl } from "@/components/knowledge/progress-control";
 import { RelationsPanel } from "@/components/knowledge/relations-panel";
+import { ViewTracker } from "@/components/knowledge/view-tracker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
@@ -39,6 +40,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
 
   return (
     <div className="grid gap-8">
+      <ViewTracker nodeId={detail.id} />
       <header className="grid gap-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <CategoryBadge category={detail.category} />

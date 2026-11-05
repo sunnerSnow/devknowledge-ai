@@ -1,7 +1,8 @@
 import { integer, jsonb, numeric, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { authSchema } from "@/lib/db/auth-schema";
 
 /**
- * 與 supabase/migrations/ 對應的 Drizzle schema。
+ * 與 db/migrations/ 對應的 Drizzle schema（帳號表在 auth-schema.ts）。
  * 約束、RLS 與權限以 SQL migration 為準；這裡只描述欄位，讓查詢有型別。
  * search_text／search_vector 由資料庫維護，不在這裡宣告（查詢時用 sql 片段）。
  */
@@ -92,4 +93,5 @@ export const aiUsage = dk.table("ai_usage", {
   createdAt: createdAt(),
 });
 
-export const schema = { profiles, knowledgeNodes, knowledgeContents, knowledgeRelations, userKnowledgeProgress, aiUsage };
+export const schema = { profiles, knowledgeNodes, knowledgeContents, knowledgeRelations, userKnowledgeProgress, aiUsage, ...authSchema };
+export { users } from "@/lib/db/auth-schema";

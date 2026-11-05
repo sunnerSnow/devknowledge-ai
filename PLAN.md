@@ -2,7 +2,7 @@
 
 > **進度（2026-11-05）**：Phase 0 ＋ Phase 1 已完成，程式在 `web/`（接續前先讀 `web/README.md`）。
 > 25 項 Vitest 測試、typecheck、lint、`next build` 通過；本機示範模式以 Chrome 走過登入→搜尋→AI 建立→標記進度→stub→別名搜尋→手機版。
-> 尚未接 Supabase、尚未部署、尚未用真實 Gemini 金鑰測過（provider 已實作，待使用者提供金鑰）。下一步：Phase 2 職缺分析。
+> 2026-11-05 稍後：Gemini 以真實金鑰實測通過（預設 gemini-3.6-flash、備用 flash-lite）；資料庫決定改用 **Neon**（Supabase 免費版只允許 2 個 active 專案），登入改 **Better Auth**（Email＋密碼，使用者表在 auth schema，RLS 不變），Supabase 相依已移除；`npm run db:migrate` 可對 Neon 跑 migration。待使用者提供 Neon 連線字串後實測，再部署 Vercel。下一步：Phase 2 職缺分析。
 
 > 依據：`DevKnowledge_AI_MVP_Spec.md`（MVP 1.0）第 15 節的要求，先回報現況、第一階段範圍與環境變數，確認後再開發。
 > 日期：2026-11-05
@@ -26,7 +26,7 @@
 
 | # | 項目 | Spec 建議 | 我的建議 | 原因 |
 |---|---|---|---|---|
-| D1 | 資料存取 | Supabase client（`@supabase/supabase-js`）直接存取 | **Drizzle ORM ＋ `DATABASE_URL`，表放在 `dk` schema（不在 public）**，RLS 為第二道防線（STACK 模式） | 可在 PGlite 上寫 RLS 整合測試（spec 第 10 節要求 RLS 必須有測試）；Data API 碰不到私人資料；本機免 Supabase 就能跑完整流程 |
+| D1 | 資料存取 | Supabase client（`@supabase/supabase-js`）直接存取 | **Drizzle ORM ＋ `DATABASE_URL`，表放在 `dk` schema（不在 public）**，RLS 為第二道防線（STACK 模式）。**2026-11-05 更新：資料庫改 Neon、登入改 Better Auth**（Supabase 免費版 2 個 active 專案的限制已用滿；Neon 是純 Postgres，程式碼不變，只換 Auth） | 可在 PGlite 上寫 RLS 整合測試（spec 第 10 節要求 RLS 必須有測試）；本機免外部服務就能跑完整流程 |
 | D2 | UI 元件 | shadcn/ui ＋ React Hook Form | **已定案（2026-11-05）：照 spec 用 shadcn/ui ＋ RHF**，Phase 0 把 shadcn CSS 變數對到 spec 配色 | Phase 2–4 的逐項自評、一次一題作答、職缺欄位確認等表單與互動元件較多 |
 | D3 | AI 供應商 | OpenAI API（支援結構化輸出的模型） | **已定案（2026-11-05）：免費優先 → Gemini 免費方案**（預設 `gemini-3.8-flash`，可改 flash-lite）＋ `mock`；做成 `AiProvider` 介面，之後要加 OpenAI／Claude 只需多一個檔案 | 使用者要求免費方案優先。OpenAI 無免費 token；Groq 免費但 TPM 太小。注意：Gemini 免費方案的資料會被 Google 用來改善產品，UI 要提醒不要貼個人聯絡資料 |
 | D4 | 子表 user_id | `job_skills`、`learning_tasks`、`practice_questions` 沒有 `user_id` | **加上 `user_id` ＋ `(父 id, user_id)` 複合外鍵** | RLS policy 不用 join 父表、資料庫保證子資料不會掛到別人名下（STACK 模式） |

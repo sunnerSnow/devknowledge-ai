@@ -13,7 +13,7 @@ const cache = globalThis as unknown as { __dkDb?: Promise<Db> };
 
 /**
  * 取得資料庫：
- * - 有 DATABASE_URL：連 Supabase Postgres（pooler 的 transaction mode，所以關掉 prepared statements）
+ * - 有 DATABASE_URL：連 Postgres（Neon 用 pooled 連線字串；PgBouncer transaction mode，所以關掉 prepared statements）
  * - 沒有：本機示範模式，用 PGlite 存在 web/.data/pglite，啟動時自動跑 migration
  */
 export function getDb(): Promise<Db> {

@@ -6,7 +6,7 @@ import { aiEnv, isLocalMode } from "@/lib/config";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
   return (
-    <AppShell userLabel={user.email ?? user.id} localMode={isLocalMode()} aiProvider={aiEnv().provider} logout={logoutAction}>
+    <AppShell userLabel={user.name || user.email || user.id} localMode={isLocalMode()} aiProvider={aiEnv().provider} logout={logoutAction}>
       {children}
     </AppShell>
   );

@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { createPGlite, type Db, ensureLocalAuthUser, openLocalDb } from "@/lib/db/local";
+import { sql } from "drizzle-orm";
+import { createPGlite, type Db, openLocalDb } from "@/lib/db/local";
 import { ensureProfile } from "@/lib/services/profiles";
 
-/** 記憶體內的 PGlite：跑 auth 模擬＋全部 migration，跟正式 schema 相同（含 RLS） */
+/** 記憶體內的 PGlite：跑全部 migration，跟正式 schema 相同（含 auth schema、RLS） */
 export async function createTestDb(): Promise<Db> {
   return openLocalDb(createPGlite());
 }
 
+/** 直接在 auth.users 建一個使用者（不經過 Better Auth；測服務層與 RLS 用） */
 export async function createUser(db: Db, email = `${randomUUID().slice(0, 8)}@example.test`): Promise<string> {
   const id = randomUUID();
-  await ensureLocalAuthUser(db, id, email);
+  await db.execute(sql`insert into auth.users (id, name, email) values (${id}, ${email.split("@")[0]}, ${email})`);
   await ensureProfile(db, id, email);
   return id;
 }

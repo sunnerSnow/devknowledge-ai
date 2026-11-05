@@ -10,8 +10,19 @@ describe("migration", () => {
     await bootstrapLocal(client);
     await bootstrapLocal(client);
     const tables = await client.query<{ table_name: string }>("select table_name from information_schema.tables where table_schema = 'dk' order by 1");
-    expect(tables.rows.map((r) => r.table_name)).toEqual(["ai_usage", "knowledge_contents", "knowledge_nodes", "knowledge_relations", "profiles", "user_knowledge_progress"]);
+    expect(tables.rows.map((r) => r.table_name)).toEqual(["ai_usage", "knowledge_contents", "knowledge_nodes", "knowledge_relations", "profiles", "rate_limits", "user_knowledge_progress"]);
+    const authTables = await client.query<{ table_name: string }>("select table_name from information_schema.tables where table_schema = 'auth' order by 1");
+    expect(authTables.rows.map((r) => r.table_name)).toEqual(["accounts", "sessions", "users", "verifications"]);
     await client.close();
+  });
+
+  it("authenticated 對 auth schema 的表沒有任何權限，但能呼叫 auth.uid()", async () => {
+    const db = await createTestDb();
+    const alice = await createUser(db);
+    const msg = await expectDbRejects(withUser(db, alice, (tx) => tx.execute(sql`select * from auth.users`)));
+    expect(msg).toMatch(/permission denied/i);
+    const uid = rowsOf<{ uid: string }>(await withUser(db, alice, (tx) => tx.execute(sql`select auth.uid()::text as uid`)));
+    expect(uid[0].uid).toBe(alice);
   });
 
   it("authenticated 對知識表只有 SELECT；anon 沒有任何權限", async () => {

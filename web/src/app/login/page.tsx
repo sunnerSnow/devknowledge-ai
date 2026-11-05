@@ -4,16 +4,16 @@ import { loginLocalAction } from "@/app/actions";
 import { Brand } from "@/components/brand";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { LOCAL_USERS } from "@/lib/auth/local-users";
 import { getSessionUser } from "@/lib/auth/session";
 import { isLocalMode } from "@/lib/config";
-import { SupabaseLoginForm } from "./supabase-login-form";
+import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "登入" };
 
-export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+export default async function LoginPage() {
   if (await getSessionUser()) redirect("/");
-  const { error } = await searchParams;
   const local = isLocalMode();
 
   return (
@@ -48,21 +48,16 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </ul>
         </section>
         <section className="w-full max-w-[440px] rounded-2xl border bg-card p-6 shadow-sm sm:p-8 lg:justify-self-end">
-          <h2 className="text-xl font-semibold text-primary dark:text-foreground">登入</h2>
-          {error === "confirm" ? (
-            <Alert variant="destructive" className="mt-4">
-              <AlertDescription>確認連結無效或已過期，請重新登入或註冊。</AlertDescription>
-            </Alert>
-          ) : null}
+          <h2 className="text-xl font-semibold text-primary dark:text-foreground">登入 DevKnowledge AI</h2>
 
           {local ? (
             <>
               <Alert className="mt-4">
                 <AlertDescription>
-                  本機示範模式：資料存在這台電腦的 <code className="font-mono text-xs">web/.data/pglite</code>，不是正式資料庫。選一位示範使用者登入；兩位的資料互相看不到。
+                  本機示範模式：資料存在這台電腦的 <code className="font-mono text-xs">web/.data/pglite</code>，不是正式資料庫。可以一鍵以示範使用者登入；兩位的資料互相看不到。
                 </AlertDescription>
               </Alert>
-              <div className="mt-6 grid gap-3">
+              <div className="mt-4 grid gap-3">
                 {LOCAL_USERS.map((u) => (
                   <form key={u.key} action={loginLocalAction}>
                     <input type="hidden" name="user" value={u.key} />
@@ -72,10 +67,16 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                   </form>
                 ))}
               </div>
+              <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
+                <Separator className="flex-1" />
+                或用 Email 註冊／登入
+                <Separator className="flex-1" />
+              </div>
             </>
-          ) : (
-            <SupabaseLoginForm />
-          )}
+          ) : null}
+
+          <LoginForm />
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">目前不需要驗證 Email；忘記密碼的重設功能稍後提供。</p>
         </section>
       </main>
     </div>
