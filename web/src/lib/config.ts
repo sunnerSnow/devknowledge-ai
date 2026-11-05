@@ -1,3 +1,5 @@
+import { GEMINI_THINKING_LEVELS, type GeminiThinking, isGeminiThinking } from "@/lib/ai/thinking";
+
 /**
  * 執行模式：
  * - Supabase 模式：NEXT_PUBLIC_SUPABASE_URL ＋ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY（或舊版 ANON_KEY）＋ DATABASE_URL 都有設
@@ -28,8 +30,18 @@ export function isLocalMode(): boolean {
 
 export type AiProviderName = "mock" | "gemini";
 
+export interface AiEnv {
+  provider: AiProviderName;
+  apiKey: string | null;
+  model: string;
+  /** 主要模型過載時改用；空字串表示不換 */
+  fallbackModel: string | null;
+  thinking: GeminiThinking;
+  hourlyLimit: number;
+}
+
 /** AI 設定：預設 mock；選 gemini 卻沒給金鑰會直接報錯，不會默默改用 mock */
-export function aiEnv(): { provider: AiProviderName; apiKey: string | null; model: string; hourlyLimit: number } {
+export function aiEnv(): AiEnv {
   const provider = (process.env.AI_PROVIDER || "mock").trim();
   if (provider !== "mock" && provider !== "gemini") {
     throw new Error(`不支援的 AI_PROVIDER：${provider}（可用：mock、gemini）`);
@@ -38,11 +50,19 @@ export function aiEnv(): { provider: AiProviderName; apiKey: string | null; mode
   if (provider === "gemini" && !apiKey) {
     throw new Error("AI_PROVIDER=gemini 需要設定 GEMINI_API_KEY（https://aistudio.google.com）");
   }
+  const thinking = (process.env.GEMINI_THINKING || "low").trim();
+  if (!isGeminiThinking(thinking)) {
+    throw new Error(`GEMINI_THINKING 只能是 ${GEMINI_THINKING_LEVELS.join("、")}（目前：${thinking}）`);
+  }
+  const fallbackRaw = process.env.GEMINI_FALLBACK_MODEL;
   const hourlyLimit = Number(process.env.AI_HOURLY_LIMIT ?? 20);
   return {
     provider,
     apiKey,
-    model: process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash",
+    // 2026-11-05 實測：3.8-flash 在免費方案常過載或超過 100 秒；3.6-flash 約 12 秒完成
+    model: process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash",
+    fallbackModel: fallbackRaw === undefined ? "gemini-3.5-flash-lite" : fallbackRaw.trim() || null,
+    thinking,
     hourlyLimit: Number.isFinite(hourlyLimit) && hourlyLimit > 0 ? Math.floor(hourlyLimit) : 20,
   };
 }

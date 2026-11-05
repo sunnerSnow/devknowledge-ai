@@ -27,12 +27,16 @@ npm run dev          # http://localhost:3000
    ```
    AI_PROVIDER=gemini
    GEMINI_API_KEY=你的金鑰
-   # GEMINI_MODEL=gemini-3.8-flash   （預設；額度不夠可改 gemini-3.5-flash-lite）
+   # GEMINI_MODEL=gemini-3.6-flash            （預設；實測約 12 秒生成一頁）
+   # GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite（主要模型 503 過載時改用；空字串表示不換）
+   # GEMINI_THINKING=low                      （minimal／low／medium／high）
    ```
 3. 重新啟動。金鑰只在伺服器端使用，不會進 client bundle。
 4. 注意：免費方案送出的內容會被 Google 用來改善產品，不要在技術名詞或職缺內容放個人聯絡資料。
 
-每位使用者每小時最多呼叫 AI `AI_HOURLY_LIMIT`（預設 20）次，含失敗的呼叫。
+每位使用者每小時最多呼叫 AI `AI_HOURLY_LIMIT`（預設 20）次，含失敗的呼叫。免費方案常遇到 503「model high demand」：provider 會退避重試一次，再不行就換備用模型；整個生成（含格式錯誤重試）總預算 110 秒。
+
+想確認金鑰與模型真的能用：`GEMINI_LIVE=1 npx vitest run tests/gemini-live.test.ts`（會用額度；平常 `npm test` 會略過這支）。
 
 ## 接上 Supabase（正式環境）
 

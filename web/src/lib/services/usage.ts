@@ -23,10 +23,16 @@ export async function finishUsage(
   tx: Tx,
   userId: string,
   id: string,
-  result: { status: "succeeded" | "failed"; inputTokens?: number | null; outputTokens?: number | null },
+  result: { status: "succeeded" | "failed"; modelName?: string; inputTokens?: number | null; outputTokens?: number | null },
 ): Promise<void> {
   await tx
     .update(aiUsage)
-    .set({ status: result.status, inputTokens: result.inputTokens ?? null, outputTokens: result.outputTokens ?? null })
+    .set({
+      status: result.status,
+      inputTokens: result.inputTokens ?? null,
+      outputTokens: result.outputTokens ?? null,
+      // 實際回應的模型可能是備用模型
+      ...(result.modelName ? { modelName: result.modelName } : {}),
+    })
     .where(and(eq(aiUsage.id, id), eq(aiUsage.userId, userId)));
 }

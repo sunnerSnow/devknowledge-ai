@@ -10,6 +10,9 @@ export function ok(data: unknown, init: { status?: number } = {}): Response {
 
 export function fail(error: unknown): Response {
   if (error instanceof AppError) {
+    // 供應商或模型的錯誤（AiUnavailableError／AiOutputError 帶 detail）要留在伺服器日誌，否則排查不到原因；不回給使用者
+    const detail = (error as { detail?: unknown }).detail;
+    if (typeof detail === "string" && detail) console.error(`[dk] ${error.code}: ${detail.replace(/\s*\n\s*/g, " | ").slice(0, 500)}`);
     return Response.json(
       { data: null, error: { code: error.code, message: error.message, ...(error.issues.length ? { issues: error.issues } : {}) } },
       { status: error.status },

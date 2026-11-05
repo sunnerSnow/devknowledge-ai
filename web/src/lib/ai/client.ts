@@ -10,6 +10,9 @@ const cache = globalThis as unknown as { __dkAi?: AiProvider };
 export function getAiProvider(): AiProvider {
   if (cache.__dkAi) return cache.__dkAi;
   const env = aiEnv();
-  cache.__dkAi = env.provider === "gemini" ? createGeminiProvider(env.apiKey!, env.model) : createMockProvider();
+  cache.__dkAi =
+    env.provider === "gemini"
+      ? createGeminiProvider(env.apiKey!, env.model, { fallbackModel: env.fallbackModel, thinking: env.thinking })
+      : createMockProvider();
   return cache.__dkAi;
 }

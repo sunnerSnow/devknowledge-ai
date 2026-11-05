@@ -26,11 +26,15 @@ export interface AiProvider {
   generateStructured(request: StructuredRequest): Promise<StructuredResult>;
 }
 
+/** 失敗原因分類：provider 依此決定要不要重試或換模型，不靠 HTTP 狀態碼猜 */
+export type AiFailureReason = "overloaded" | "quota" | "timeout" | "config" | "auth" | "empty" | "other";
+
 /** 模型或供應商那邊出問題（額度、逾時、服務異常）；會記錄但不會把原始錯誤丟給使用者 */
 export class AiUnavailableError extends AppError {
   constructor(
     message: string,
     readonly detail: string,
+    readonly reason: AiFailureReason = "other",
     status = 503,
   ) {
     super("ai_unavailable", message, status);

@@ -60,12 +60,16 @@ export interface GenerateDeps {
 }
 
 const MAX_OUTPUT_TOKENS = 8192;
-/** 單次 AI 呼叫逾時；兩次嘗試合計 100 秒，要低於 API 路由的 maxDuration（120 秒），平台才不會在 catch 之前砍掉請求 */
-const TIMEOUT_MS = 50_000;
+/**
+ * 整個生成（含格式錯誤後的重試）的總預算；要低於 API 路由的 maxDuration（120 秒），平台才不會在 catch 之前砍掉請求。
+ * 單次呼叫最多用掉剩餘預算；剩餘不足 MIN_RETRY_MS 就不再重試。
+ */
+const TOTAL_BUDGET_MS = 110_000;
+const MIN_RETRY_MS = 25_000;
 const MAX_ATTEMPTS = 2;
 /**
  * 「生成中」佔位超過這個時間就視為逾時、可被接手。
- * 必須明顯大於最壞耗時（TIMEOUT_MS × MAX_ATTEMPTS ＝ 100 秒，加上資料庫往返），否則同一主題會被兩個請求同時生成。
+ * 必須明顯大於最壞耗時（TOTAL_BUDGET_MS 加上資料庫往返），否則同一主題會被兩個請求同時生成。
  */
 const STALE_MINUTES = 5;
 
@@ -397,10 +401,11 @@ export async function generateKnowledge(db: Db, userId: string, input: unknown, 
   // --- 呼叫 AI（交易外）並儲存；任何一步失敗都釋放佔位、把 usage 結成 failed ---
   try {
     const profile = await withService(db, (tx) => tx.query.profiles.findFirst({ where: eq(profiles.id, userId) }));
-    const { content, tokens } = await generateValidated(deps.provider, topic, profile?.targetRole ?? null);
+    const { content, tokens, model } = await generateValidated(deps.provider, topic, profile?.targetRole ?? null);
     await withService(db, async (tx) => {
-      await saveGenerated(tx, { nodeId: claim.id, token: claim.token, slug, topic, userId, content, provider: deps.provider });
-      await finishUsage(tx, userId, claim.usageId, { status: "succeeded", ...tokens });
+      // model 是實際回應的模型（可能是備用模型），不是設定裡的主要模型
+      await saveGenerated(tx, { nodeId: claim.id, token: claim.token, slug, topic, userId, content, providerName: deps.provider.name, modelName: model });
+      await finishUsage(tx, userId, claim.usageId, { status: "succeeded", modelName: model, ...tokens });
     });
   } catch (error) {
     await withService(db, async (tx) => {
@@ -467,21 +472,24 @@ async function generateValidated(
   provider: AiProvider,
   topic: string,
   targetRole: string | null,
-): Promise<{ content: KnowledgeContent; tokens: { inputTokens: number | null; outputTokens: number | null } }> {
+): Promise<{ content: KnowledgeContent; model: string; tokens: { inputTokens: number | null; outputTokens: number | null } }> {
   const base = knowledgeUserPrompt({ topic, level: "初學到中級", targetRole: targetRole || "全端工程師" });
   const jsonSchema = knowledgeJsonSchema();
   let user = base;
   let lastIssue = "";
   const tokens = { inputTokens: 0, outputTokens: 0 };
   let sawTokens = false;
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const remaining = deadline - Date.now();
+    if (attempt > 0 && remaining < MIN_RETRY_MS) break;
     const result = await provider.generateStructured({
       system: KNOWLEDGE_SYSTEM_PROMPT,
       user,
       jsonSchema,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
-      timeoutMs: TIMEOUT_MS,
+      timeoutMs: Math.max(remaining, 1),
       hint: topic,
     });
     if (result.inputTokens !== null || result.outputTokens !== null) {
@@ -491,7 +499,7 @@ async function generateValidated(
     }
     const outcome = parseContent(result.text);
     if (outcome.ok) {
-      return { content: outcome.content, tokens: sawTokens ? tokens : { inputTokens: null, outputTokens: null } };
+      return { content: outcome.content, model: result.model, tokens: sawTokens ? tokens : { inputTokens: null, outputTokens: null } };
     }
     lastIssue = outcome.issue;
     user = knowledgeRetryPrompt(base, lastIssue);
@@ -527,9 +535,9 @@ function stripCodeFence(text: string): string {
 
 async function saveGenerated(
   tx: Tx,
-  args: { nodeId: string; token: string; slug: string; topic: string; userId: string; content: KnowledgeContent; provider: AiProvider },
+  args: { nodeId: string; token: string; slug: string; topic: string; userId: string; content: KnowledgeContent; providerName: string; modelName: string },
 ): Promise<void> {
-  const { nodeId, token, slug, topic, userId, content, provider } = args;
+  const { nodeId, token, slug, topic, userId, content, providerName, modelName } = args;
 
   // 鎖住節點並確認佔位還是自己的；被接手（逾時後別人重新生成）就放棄，不寫入
   const [current] = await tx
@@ -550,8 +558,8 @@ async function saveGenerated(
     knowledgeNodeId: nodeId,
     version: (latest?.version ?? 0) + 1,
     content,
-    provider: provider.name,
-    modelName: provider.model,
+    provider: providerName,
+    modelName,
     promptVersion: KNOWLEDGE_PROMPT_VERSION,
     createdBy: userId,
   });

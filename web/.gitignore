@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 本機示範模式的 PGlite 資料
 /.data/
+
+# 範例設定檔要進 repo（真正的 .env.local 仍被上面的 .env* 擋住）
+!.env.example
