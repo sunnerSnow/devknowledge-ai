@@ -1,0 +1,66 @@
+{
+  "name": "RAG",
+  "english_name": "Retrieval-Augmented Generation",
+  "category": "AI",
+  "aliases": ["檢索增強生成", "Retrieval Augmented Generation"],
+  "summary": "讓大型語言模型在生成回答前，先從外部資料檢索相關內容，再依據這些內容作答的架構。",
+  "why_it_matters": "大型語言模型的知識停在訓練資料的時間點，而且無法得知公司內部文件或私有資料。RAG 不需要重新訓練模型，就能把最新或私有的資料放進回答的上下文，讓回答有依據、可追溯來源，也降低部分幻覺風險。對需要接內部知識庫、客服文件或法規的產品來說，RAG 通常是第一個會被考慮的做法。",
+  "prerequisites": [
+    { "name": "LLM", "reason": "理解生成模型的基本能力、上下文長度限制與幻覺問題" },
+    { "name": "Embedding", "reason": "理解文字如何轉成向量，以及向量相似度代表什麼" },
+    { "name": "Vector Database", "reason": "理解向量如何被儲存與以相似度檢索" }
+  ],
+  "sections": [
+    {
+      "title": "核心原理",
+      "content_md": "RAG 把「找資料」和「寫答案」拆成兩段：\n\n1. **索引（離線）**：把文件切成段落（chunk），每段用 embedding 模型轉成向量，存進向量資料庫，並保留原文與來源資訊。\n2. **檢索（線上）**：使用者提問時，把問題也轉成向量，找出最相似的前 k 段。\n3. **生成（線上）**：把問題與檢索到的段落一起組成 prompt，交給 LLM 生成回答，並要求引用來源。\n\n關鍵在於模型只「看」到被檢索出來的內容，所以檢索品質直接決定回答品質。常見的改善方向有：切段策略（大小、重疊）、混合檢索（向量＋關鍵字 BM25）、重新排序（reranking）、查詢改寫（query rewriting）。",
+      "key_points": ["離線索引、線上檢索與生成", "檢索品質決定回答品質", "切段、混合檢索、重排序是常見改善點"]
+    },
+    {
+      "title": "實際使用場景",
+      "content_md": "- **內部知識庫問答**：員工手冊、SOP、技術文件，回答附上出處。\n- **客服助理**：以產品說明與歷史工單為依據回覆，避免模型自行編造規格。\n- **法規或合約查詢**：需要逐字引用條文，不能只靠模型記憶。\n- **程式碼問答**：對 repository 建立索引，回答時指出相關檔案。\n\n不適合的情況：資料本身很少（直接塞進 prompt 就好）、問題需要跨大量文件做彙總統計（檢索前 k 段不夠），或需要模型改變「說話風格」（這是微調的範疇）。",
+      "key_points": ["適合需要依據與出處的問答", "資料少時直接放進 prompt 即可", "彙總統計類問題不適合只靠檢索"]
+    },
+    {
+      "title": "常見架構決策",
+      "content_md": "| 決策 | 選項 | 取捨 |\n|---|---|---|\n| 切段大小 | 200–1000 tokens | 太小失去脈絡，太大浪費上下文並稀釋相關性 |\n| 檢索方式 | 向量／關鍵字／混合 | 專有名詞與代號用關鍵字較準，語意問題用向量較好 |\n| 回傳段數 k | 3–10 | 越多越完整，但成本與雜訊也增加 |\n| 重排序 | 有／無 | 多一次模型呼叫，換取更準的前幾段 |\n\n評估 RAG 時應分開量測「檢索有沒有找到正確段落」（recall）與「模型有沒有正確使用這些段落」（faithfulness），否則不知道該修哪一段。",
+      "key_points": ["切段大小與 k 值是成本與品質的取捨", "檢索與生成要分開評估"]
+    }
+  ],
+  "architecture": {
+    "mermaid": "flowchart LR\n  subgraph 離線索引\n    D[文件] --> C[切段] --> E1[Embedding] --> V[(向量資料庫)]\n  end\n  Q[使用者問題] --> E2[Embedding] --> R[相似度檢索]\n  V --> R\n  R --> P[組合 Prompt: 問題 + 檢索段落]\n  P --> L[LLM]\n  L --> A[回答 + 來源]",
+    "description": "文件離線切段並向量化存入向量資料庫；提問時把問題向量化、檢索最相似的段落，與問題一起交給 LLM 生成附來源的回答。"
+  },
+  "code_examples": [
+    {
+      "language": "python",
+      "title": "最小可行的 RAG 流程（不依賴特定框架）",
+      "description": "示範流程結構。embed() 與 generate() 需換成你使用的 embedding 模型與 LLM API；向量相似度這裡用簡單的餘弦相似度，正式環境改用向量資料庫。",
+      "code": "import math\n\ndef cosine(a, b):\n    dot = sum(x * y for x, y in zip(a, b))\n    na = math.sqrt(sum(x * x for x in a))\n    nb = math.sqrt(sum(y * y for y in b))\n    return dot / (na * nb)\n\ndef chunk(text, size=500, overlap=50):\n    chunks, start = [], 0\n    while start < len(text):\n        chunks.append(text[start:start + size])\n        start += size - overlap\n    return chunks\n\n# 1. 離線索引\ndocs = {\"handbook.md\": open(\"handbook.md\", encoding=\"utf-8\").read()}\nindex = []  # [(來源, 段落, 向量)]\nfor source, text in docs.items():\n    for c in chunk(text):\n        index.append((source, c, embed(c)))  # embed(): 呼叫 embedding 模型\n\n# 2. 線上檢索\ndef retrieve(question, k=3):\n    qv = embed(question)\n    scored = sorted(index, key=lambda item: cosine(qv, item[2]), reverse=True)\n    return scored[:k]\n\n# 3. 生成\ndef answer(question):\n    hits = retrieve(question)\n    context = \"\\n\\n\".join(f\"[{i+1}] ({src}) {text}\" for i, (src, text, _) in enumerate(hits))\n    prompt = (\n        \"只根據下列資料回答，並在句尾標註引用編號；資料不足就說不知道。\\n\\n\"\n        f\"資料：\\n{context}\\n\\n問題：{question}\"\n    )\n    return generate(prompt)  # generate(): 呼叫 LLM"
+    }
+  ],
+  "comparisons": [
+    { "name": "Fine-tuning", "difference": "RAG 在推論時檢索外部資料，資料更新只要重建索引；微調把知識寫進模型參數，適合調整風格或格式，更新知識成本高且難以引用來源。" },
+    { "name": "Long context（直接把文件塞進 prompt）", "difference": "資料量小時直接放進上下文最簡單；資料量大、需要控制成本或需要出處時，RAG 只送相關段落更划算。" }
+  ],
+  "common_misconceptions": [
+    "RAG 不保證答案一定正確：檢索錯段落或模型忽略段落都會出錯。",
+    "RAG 不是向量資料庫的同義詞：關鍵字檢索、混合檢索也都是 RAG。",
+    "用了 RAG 不代表不需要評估：仍要量測檢索召回率與回答忠實度。"
+  ],
+  "interview_topics": [
+    { "question": "RAG 與 Fine-tuning 有何差異？分別適合什麼情境？", "evaluation_points": ["知識更新方式", "成本與維護", "是否需要引用來源", "風格調整 vs 知識注入"] },
+    { "question": "RAG 回答品質不好時，你會怎麼排查？", "evaluation_points": ["先分辨是檢索問題還是生成問題", "檢查切段與 embedding", "考慮混合檢索與重排序", "prompt 是否要求只依據資料"] },
+    { "question": "為什麼要把文件切段？切段大小怎麼決定？", "evaluation_points": ["上下文長度與成本", "相關性稀釋", "重疊的用途"] }
+  ],
+  "related_topics": [
+    { "name": "Vector Database", "relation": "related" },
+    { "name": "Reranking", "relation": "extension" },
+    { "name": "Prompt Engineering", "relation": "related" },
+    { "name": "Fine-tuning", "relation": "alternative" }
+  ],
+  "learning_tasks": [
+    { "title": "建立最小 RAG 流程", "description": "準備 3–5 份文件，完成切段、向量化、檢索並生成附來源的回答；用 5 個問題比較有無檢索的差異。", "estimated_minutes": 120 }
+  ],
+  "caveats": ["不同框架與模型的 API 可能隨版本改變，請以官方文件為準。", "embedding 模型與向量資料庫的選擇會影響檢索品質，數字請以自己的資料實測。"]
+}

@@ -1,0 +1,72 @@
+{
+  "name": "AWS",
+  "english_name": "Amazon Web Services",
+  "category": "Cloud",
+  "aliases": ["Amazon Web Services", "亞馬遜雲端服務"],
+  "summary": "Amazon 提供的公有雲平台，以按用量計費的方式提供運算、儲存、資料庫、網路與許多託管服務。",
+  "why_it_matters": "多數公司的服務都部署在公有雲上，而 AWS 是市占最高的平台之一。工程師不一定要精通每個服務，但需要理解帳號與權限（IAM）、網路（VPC）、運算（EC2、Lambda、容器）、儲存（S3）與資料庫（RDS）這些核心概念，才能把應用安全地部署上去並控制成本。",
+  "prerequisites": [
+    { "name": "Linux", "reason": "大部分雲端主機與容器都是 Linux 環境" },
+    { "name": "Networking", "reason": "理解 IP、子網路、防火牆規則，才能設定 VPC 與安全群組" },
+    { "name": "HTTP", "reason": "理解請求如何經由負載平衡器到達服務" }
+  ],
+  "sections": [
+    {
+      "title": "核心原理",
+      "content_md": "AWS 的核心概念：\n\n- **Region 與 Availability Zone**：Region 是地理區域（例如東京），每個 Region 有多個彼此獨立的 AZ；跨 AZ 部署可提高可用性。\n- **IAM（身分與權限）**：使用者、角色、政策。原則是最小權限：程式用「角色」取得暫時憑證，不要把長期金鑰寫在程式裡。\n- **VPC（虛擬網路）**：自己的私有網路，裡面有子網路、路由表、安全群組（實例層防火牆）與 NACL。\n- **運算**：EC2（虛擬機）、Lambda（無伺服器函數）、ECS／EKS（容器）。\n- **儲存與資料庫**：S3（物件儲存）、EBS（磁碟）、RDS（託管關聯式資料庫）、DynamoDB（NoSQL）。\n- **計費**：按用量計費，主要成本來自運算時數、儲存容量與對外流量（egress）。",
+      "key_points": ["Region／AZ 決定可用性", "IAM 最小權限、用角色不用金鑰", "VPC 是自己的私有網路", "按用量計費，注意對外流量"]
+    },
+    {
+      "title": "實際使用場景",
+      "content_md": "一個典型的 Web 應用部署：\n\n1. 靜態檔案放 **S3**，前面接 **CloudFront** CDN。\n2. API 跑在 **ECS（Fargate）** 或 **Lambda**，前面接 **Application Load Balancer** 或 **API Gateway**。\n3. 資料庫用 **RDS（PostgreSQL）**，放在私有子網路，只允許 API 的安全群組連線。\n4. 秘密（資料庫密碼、第三方金鑰）放 **Secrets Manager** 或 **SSM Parameter Store**。\n5. 日誌與監控用 **CloudWatch**。\n\n小型專案或個人作品可以先用 Lambda ＋ API Gateway ＋ DynamoDB／RDS，成本接近零；流量大或需要長連線時再換成容器。",
+      "key_points": ["S3＋CloudFront 放靜態檔", "API 用容器或 Lambda", "資料庫放私有子網路", "秘密不要寫在程式或環境檔裡"]
+    },
+    {
+      "title": "安全與成本的基本功",
+      "content_md": "- 根帳號只用來建立第一個管理者，之後開啟 MFA 並封存。\n- 每個服務用自己的 IAM 角色；CI/CD 用 OIDC 取得暫時憑證。\n- S3 bucket 預設封鎖公開存取；需要公開的用 CloudFront 代理。\n- 開 **Budgets** 設定費用警示；開發環境用完關機、設 TTL 自動清理。\n- 用 Infrastructure as Code（CloudFormation、CDK 或 Terraform）管理資源，避免點選出來的設定無法重現。",
+      "key_points": ["根帳號封存＋MFA", "角色與暫時憑證", "S3 預設不公開", "費用警示與 IaC"]
+    }
+  ],
+  "architecture": {
+    "mermaid": "flowchart LR\n  U[使用者] --> CF[CloudFront CDN]\n  CF --> S3[(S3 靜態檔案)]\n  CF --> ALB[Application Load Balancer]\n  subgraph VPC\n    ALB --> API[ECS Fargate API]\n    API --> RDS[(RDS PostgreSQL 私有子網路)]\n  end\n  API --> SM[Secrets Manager]\n  API --> CW[CloudWatch 日誌]",
+    "description": "靜態檔案由 CloudFront 從 S3 提供；API 在 VPC 內的容器上執行，經負載平衡器對外，資料庫放在只允許 API 連線的私有子網路。"
+  },
+  "code_examples": [
+    {
+      "language": "bash",
+      "title": "用 AWS CLI 建立 S3 bucket 並上傳靜態網站",
+      "description": "需要先安裝 AWS CLI 並以具備 S3 權限的身分完成 aws configure。bucket 名稱全球唯一，請換成自己的。範例保持 bucket 不公開，正式環境建議由 CloudFront 代理。",
+      "code": "# 建立 bucket（區域以東京為例）\naws s3api create-bucket \\\n  --bucket my-site-example-20260101 \\\n  --region ap-northeast-1 \\\n  --create-bucket-configuration LocationConstraint=ap-northeast-1\n\n# 封鎖所有公開存取（預設安全）\naws s3api put-public-access-block \\\n  --bucket my-site-example-20260101 \\\n  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true\n\n# 上傳 build 出來的靜態檔案\naws s3 sync ./dist s3://my-site-example-20260101 --delete"
+    },
+    {
+      "language": "typescript",
+      "title": "在 Lambda 裡用 SDK 讀取 S3 物件",
+      "description": "Node.js 執行環境；Lambda 的執行角色需要對該 bucket 的 s3:GetObject 權限。憑證由角色自動提供，不要在程式裡放金鑰。",
+      "code": "import { S3Client, GetObjectCommand } from \"@aws-sdk/client-s3\";\n\nconst s3 = new S3Client({});\n\nexport const handler = async (event: { key: string }) => {\n  const res = await s3.send(new GetObjectCommand({ Bucket: process.env.BUCKET!, Key: event.key }));\n  const body = await res.Body!.transformToString();\n  return { statusCode: 200, body };\n};"
+    }
+  ],
+  "comparisons": [
+    { "name": "GCP / Azure", "difference": "概念大致對應（IAM、VPC、物件儲存、託管資料庫），差異在服務名稱、計費細節與生態系；學會一家後轉換成本不高。" },
+    { "name": "Vercel / Netlify 這類 PaaS", "difference": "PaaS 把部署、擴展與 CDN 都包好，適合前端與小型 API；AWS 彈性大但要自己處理網路、權限與維運。" }
+  ],
+  "common_misconceptions": [
+    "上雲不代表自動安全：預設設定仍需要自己檢查 IAM 與公開存取。",
+    "按用量計費不代表便宜：忘記關的資源與對外流量很容易超支。",
+    "不需要把所有服務都學會，核心是 IAM、VPC、運算、儲存、資料庫與監控。"
+  ],
+  "interview_topics": [
+    { "question": "請說明 IAM 使用者、角色與政策的差別，以及為什麼程式應該用角色。", "evaluation_points": ["長期憑證 vs 暫時憑證", "最小權限", "角色可被服務或 CI 承擔"] },
+    { "question": "一個 Web 應用在 AWS 上的典型架構長什麼樣？資料庫為什麼要放私有子網路？", "evaluation_points": ["CDN、負載平衡、運算、資料庫的分層", "公有／私有子網路", "安全群組的來源限制"] },
+    { "question": "你會怎麼避免雲端費用失控？", "evaluation_points": ["Budgets 與警示", "關閉閒置資源", "選對運算型態", "注意 egress"] }
+  ],
+  "related_topics": [
+    { "name": "Docker", "relation": "related" },
+    { "name": "Terraform", "relation": "extension" },
+    { "name": "Serverless", "relation": "extension" },
+    { "name": "CI/CD", "relation": "related" }
+  ],
+  "learning_tasks": [
+    { "title": "部署一個靜態網站＋一個 Lambda API", "description": "用免費方案把前端放到 S3＋CloudFront，寫一個 Lambda 回傳 JSON 並經 API Gateway 對外；全程用 IAM 角色，最後設定費用警示。", "estimated_minutes": 180 }
+  ],
+  "caveats": ["AWS 的免費方案內容、服務價格與 Region 可用性會變動，請以官方頁面為準。", "本頁不列出具體價格。"]
+}

@@ -1,0 +1,72 @@
+{
+  "name": "Docker",
+  "english_name": null,
+  "category": "DevOps",
+  "aliases": ["容器", "Container", "Docker 容器"],
+  "summary": "把應用程式連同它需要的執行環境打包成映像檔（image），再以隔離的容器（container）執行的工具，讓程式在任何機器上都用同一種方式跑。",
+  "why_it_matters": "「在我電腦上可以跑」的問題來自環境差異：作業系統、語言版本、系統套件。Docker 把這些都寫進 Dockerfile 並建成映像檔，開發、測試、正式環境用同一份映像檔，部署與回滾都變得可重現。它也是 Kubernetes、ECS 等容器平台的基礎。",
+  "prerequisites": [
+    { "name": "Linux", "reason": "容器內通常是 Linux 環境，基本指令與檔案系統概念會用到" },
+    { "name": "Shell", "reason": "Dockerfile 與 docker 指令都在終端機操作" },
+    { "name": "Networking", "reason": "理解 port 對應與容器間的網路" }
+  ],
+  "sections": [
+    {
+      "title": "核心原理",
+      "content_md": "- **映像檔（image）**：唯讀的分層檔案系統，由 Dockerfile 一步一步建出來；每一行指令是一層，有快取。\n- **容器（container）**：映像檔的執行實例，上面多一層可寫層；停掉或刪除後可寫層就消失，所以資料要放 **volume**。\n- **隔離**：靠 Linux 的 namespace（行程、網路、檔案系統各自獨立）與 cgroups（限制 CPU、記憶體），不是虛擬機，所以啟動快、開銷小。\n- **Registry**：存放映像檔的倉庫（Docker Hub、GHCR、ECR），`push`／`pull` 搬運映像檔。\n- **網路**：容器預設有自己的網路介面，用 `-p 主機port:容器port` 對外；同一個 compose 專案裡的服務可用服務名稱互相連線。",
+      "key_points": ["映像檔是分層、唯讀、有快取", "容器是映像檔的執行實例，資料要放 volume", "namespace 與 cgroups 提供隔離", "映像檔透過 registry 發布"]
+    },
+    {
+      "title": "實際使用場景",
+      "content_md": "- **本機開發環境**：用 docker compose 一鍵啟動 PostgreSQL、Redis，不用在電腦上安裝。\n- **CI**：測試在乾淨的容器裡跑，結果可重現。\n- **部署**：把應用建成映像檔，推到 registry，由雲端平台拉下來執行。\n- **微服務**：每個服務一個映像檔，各自獨立升級。\n\n常見實務：多階段建置（build 階段裝完整工具，runtime 階段只留執行需要的檔案）讓映像檔變小；以非 root 使用者執行；不要把秘密寫進映像檔。",
+      "key_points": ["本機開發、CI、部署都適用", "多階段建置縮小映像檔", "非 root 執行、秘密不進映像檔"]
+    },
+    {
+      "title": "常用指令",
+      "content_md": "| 指令 | 用途 |\n|---|---|\n| `docker build -t app:1.0 .` | 依當前目錄的 Dockerfile 建映像檔 |\n| `docker run -d -p 3000:3000 --name app app:1.0` | 背景執行並把主機 3000 對到容器 3000 |\n| `docker ps` / `docker logs app` | 看執行中的容器與日誌 |\n| `docker exec -it app sh` | 進入容器的 shell |\n| `docker stop app && docker rm app` | 停止並刪除容器 |\n| `docker compose up -d` | 依 compose.yaml 啟動多個服務 |\n| `docker image prune` | 清掉沒用到的映像檔 |",
+      "key_points": ["build、run、ps、logs、exec 是日常五個指令", "compose 管理多服務"]
+    }
+  ],
+  "architecture": {
+    "mermaid": "flowchart LR\n  DF[Dockerfile] -->|docker build| IMG[映像檔 分層唯讀]\n  IMG -->|docker push| REG[(Registry)]\n  REG -->|docker pull| HOST[主機]\n  HOST -->|docker run| C1[容器 A]\n  HOST -->|docker run| C2[容器 B]\n  C1 --- V[(Volume 持久資料)]",
+    "description": "Dockerfile 建成映像檔，推到 registry；主機拉下映像檔後以容器執行，持久資料放在 volume。"
+  },
+  "code_examples": [
+    {
+      "language": "dockerfile",
+      "title": "Node.js 應用的多階段 Dockerfile",
+      "description": "假設專案有 package.json 與 npm run build 會輸出到 dist/。以非 root 使用者執行；Node 版本請依專案調整。",
+      "code": "# 建置階段：安裝完整相依並編譯\nFROM node:22-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\n# 執行階段：只留執行需要的東西\nFROM node:22-alpine\nWORKDIR /app\nENV NODE_ENV=production\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY --from=build /app/dist ./dist\nUSER node\nEXPOSE 3000\nCMD [\"node\", \"dist/server.js\"]"
+    },
+    {
+      "language": "yaml",
+      "title": "docker compose：應用＋PostgreSQL",
+      "description": "存成 compose.yaml 後執行 docker compose up -d。資料庫密碼這裡只是本機開發用；正式環境改用秘密管理。",
+      "code": "services:\n  app:\n    build: .\n    ports:\n      - \"3000:3000\"\n    environment:\n      DATABASE_URL: postgres://app:app@db:5432/app\n    depends_on:\n      - db\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: app\n      POSTGRES_PASSWORD: app\n      POSTGRES_DB: app\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n\nvolumes:\n  pgdata:"
+    }
+  ],
+  "comparisons": [
+    { "name": "虛擬機（VM）", "difference": "VM 各自有完整作業系統核心，隔離更強但啟動慢、佔資源；容器共用主機核心，輕量且秒級啟動。" },
+    { "name": "Kubernetes", "difference": "Docker 負責建置與執行單一主機上的容器；Kubernetes 負責在多台主機上排程、擴展與自我修復容器。" }
+  ],
+  "common_misconceptions": [
+    "容器不是虛擬機，隔離程度較弱，容器內的 root 要特別小心。",
+    "刪掉容器資料就沒了：持久資料一定要放 volume 或外部資料庫。",
+    "`latest` 標籤不代表最新版本，只是預設標籤名稱；部署請用明確版本。"
+  ],
+  "interview_topics": [
+    { "question": "映像檔與容器的差別是什麼？映像檔為什麼是分層的？", "evaluation_points": ["唯讀層與可寫層", "建置快取", "層的順序影響快取命中"] },
+    { "question": "容器和虛擬機的差別？各自適合什麼情況？", "evaluation_points": ["共用核心 vs 獨立核心", "啟動速度與資源", "隔離強度"] },
+    { "question": "怎麼讓映像檔更小、更安全？", "evaluation_points": ["多階段建置", "alpine 或 distroless 基底", "非 root", "不把秘密寫進映像檔", ".dockerignore"] }
+  ],
+  "related_topics": [
+    { "name": "Kubernetes", "relation": "extension" },
+    { "name": "CI/CD", "relation": "related" },
+    { "name": "AWS", "relation": "related" },
+    { "name": "Linux", "relation": "related" }
+  ],
+  "learning_tasks": [
+    { "title": "把一個 Node.js API 容器化並用 compose 接資料庫", "description": "寫多階段 Dockerfile、compose.yaml 啟動 API 與 PostgreSQL，確認重啟後資料仍在，並把映像檔大小壓到 200 MB 以下。", "estimated_minutes": 120 }
+  ],
+  "caveats": ["Docker Desktop 的授權條款與各基底映像檔的版本會變動，請以官方文件為準。", "Windows 容器與 Linux 容器的行為不同，本頁以 Linux 容器為主。"]
+}
