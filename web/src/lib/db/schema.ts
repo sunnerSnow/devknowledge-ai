@@ -151,6 +151,51 @@ export const userSkills = dk.table("user_skills", {
   updatedAt: updatedAt(),
 });
 
+export const TASK_TYPES = ["read", "quiz", "code", "project", "review"] as const;
+export type TaskType = (typeof TASK_TYPES)[number];
+
+export const TASK_STATUSES = ["todo", "in_progress", "completed", "skipped"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const PLAN_STATUSES = ["active", "completed", "archived"] as const;
+export type PlanStatus = (typeof PLAN_STATUSES)[number];
+
+export const learningPlans = dk.table("learning_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  jobPostingId: uuid("job_posting_id"),
+  title: text("title").notNull(),
+  goal: text("goal"),
+  summary: text("summary"),
+  weeklyMinutes: integer("weekly_minutes").notNull().default(120),
+  status: text("status", { enum: PLAN_STATUSES }).notNull().default("active"),
+  provider: text("provider"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const learningTasks = dk.table("learning_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  learningPlanId: uuid("learning_plan_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  skillName: text("skill_name"),
+  skillSlug: text("skill_slug"),
+  title: text("title").notNull(),
+  description: text("description"),
+  taskType: text("task_type", { enum: TASK_TYPES }).notNull(),
+  estimatedMinutes: integer("estimated_minutes").notNull(),
+  verification: text("verification"),
+  weekNumber: integer("week_number").notNull().default(1),
+  sortOrder: integer("sort_order").notNull().default(0),
+  status: text("status", { enum: TASK_STATUSES }).notNull().default("todo"),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const schema = {
   profiles,
   knowledgeNodes,
@@ -161,6 +206,8 @@ export const schema = {
   jobPostings,
   jobSkills,
   userSkills,
+  learningPlans,
+  learningTasks,
   ...authSchema,
 };
 export { users } from "@/lib/db/auth-schema";

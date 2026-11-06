@@ -17,6 +17,8 @@ describe("migration", () => {
       "knowledge_contents",
       "knowledge_nodes",
       "knowledge_relations",
+      "learning_plans",
+      "learning_tasks",
       "profiles",
       "rate_limits",
       "user_knowledge_progress",

@@ -9,6 +9,7 @@ import { getDb } from "@/lib/db/client";
 import { PROGRESS_STATUSES } from "@/lib/db/schema";
 import { listJobs, listTopGaps } from "@/lib/services/jobs";
 import { getProgressStats, listRecentKnowledge } from "@/lib/services/knowledge";
+import { listWeekProgress } from "@/lib/services/plans";
 import { getProfile } from "@/lib/services/profiles";
 
 const EXAMPLES = ["RAG", "LLM", "AWS", "Docker", "React", "PostgreSQL"];
@@ -16,12 +17,13 @@ const EXAMPLES = ["RAG", "LLM", "AWS", "Docker", "React", "PostgreSQL"];
 export default async function DashboardPage() {
   const user = await requireUser();
   const db = await getDb();
-  const [recent, stats, profile, gaps, jobs] = await Promise.all([
+  const [recent, stats, profile, gaps, jobs, weekProgress] = await Promise.all([
     listRecentKnowledge(db, user.id, 6),
     getProgressStats(db, user.id),
     getProfile(db, user.id),
     listTopGaps(db, user.id, 5),
     listJobs(db, user.id),
+    listWeekProgress(db, user.id),
   ]);
   const activeJobs = jobs.filter((j) => j.status === "active");
   const total = PROGRESS_STATUSES.reduce((n, s) => n + stats[s], 0);
@@ -82,6 +84,40 @@ export default async function DashboardPage() {
           <span className="text-[10px] tracking-[0.2em] text-muted-foreground">PHASE 4</span>
         </div>
       </section>
+
+      {weekProgress.length ? (
+        <section aria-labelledby="week-title" className="grid gap-6">
+          <SectionHeader
+            eyebrow="本週學習進度"
+            title="This week"
+            id="week-title"
+            aside={
+              <Link href="/plans" className="dotted-underline tracking-[0.08em]">
+                全部計畫
+              </Link>
+            }
+          />
+          <ul className="grid gap-4 md:grid-cols-3">
+            {weekProgress.map((w) => (
+              <li key={w.planId} className="flex flex-col bg-card p-5">
+                <div className="flex items-baseline justify-between text-[11px] tracking-[0.12em] text-muted-foreground">
+                  <span>WEEK {String(w.week).padStart(2, "0")}</span>
+                  <span>
+                    {w.completed}/{w.total} 完成
+                  </span>
+                </div>
+                <Link href={`/plans/${w.planId}`} className="mt-3 text-lg font-medium tracking-[0.02em] hover:dotted-underline">
+                  {w.planTitle}
+                </Link>
+                <div className="mt-3 h-1 w-full bg-foreground/10">
+                  <div className="h-1 bg-foreground" style={{ width: `${w.total ? Math.round((w.completed / w.total) * 100) : 0}%` }} />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">{w.nextTask ? `下一步：${w.nextTask.title}` : "本週任務都處理完了"}・剩餘約 {w.minutes} 分鐘</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="gaps-title" className="grid gap-6">
         <SectionHeader

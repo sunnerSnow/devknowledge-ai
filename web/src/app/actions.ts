@@ -13,6 +13,7 @@ import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
 import { deleteJob, updateJob } from "@/lib/services/jobs";
 import { markViewed, setProgress } from "@/lib/services/knowledge";
+import { deletePlan, setPlanStatus, setTaskStatus } from "@/lib/services/plans";
 import { updateProfile } from "@/lib/services/profiles";
 import { deleteUserSkill, upsertUserSkill } from "@/lib/services/skills";
 import { clientIp, consumeRateLimit } from "@/lib/services/rate-limit";
@@ -191,6 +192,48 @@ export async function deleteJobAction(jobId: string): Promise<void> {
   revalidatePath("/jobs");
   revalidatePath("/");
   redirect("/jobs");
+}
+
+// ---------------------------------------------------------------------------
+// 學習計畫（產生走 API 路由；這裡是狀態操作）
+// ---------------------------------------------------------------------------
+
+export async function setTaskStatusAction(planId: string, taskId: string, status: string): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await setTaskStatus(await getDb(), user.id, planId, taskId, { status });
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath("/plans");
+  revalidatePath("/");
+  return { done: true };
+}
+
+export async function setPlanStatusAction(planId: string, status: "active" | "completed" | "archived"): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await setPlanStatus(await getDb(), user.id, planId, status);
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath("/plans");
+  revalidatePath("/");
+  return { done: true };
+}
+
+export async function deletePlanAction(planId: string): Promise<void> {
+  const user = await sessionOrRedirect();
+  try {
+    await deletePlan(await getDb(), user.id, planId);
+  } catch (error) {
+    if (!(error instanceof AppError)) logError(error);
+  }
+  revalidatePath("/plans");
+  revalidatePath("/");
+  redirect("/plans");
 }
 
 // ---------------------------------------------------------------------------

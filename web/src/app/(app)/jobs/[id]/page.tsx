@@ -9,7 +9,9 @@ import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import type { ProgressStatus } from "@/lib/db/schema";
 import { AppError } from "@/lib/errors";
+import { GeneratePlanButton } from "@/components/plans/generate-plan-button";
 import { ANALYSIS_ERROR_MESSAGES, getJob, type JobDetail } from "@/lib/services/jobs";
+import { listPlans } from "@/lib/services/plans";
 
 const SENIORITY_LABELS: Record<string, string> = { intern: "實習", junior: "初階", mid: "中階", senior: "資深", lead: "主管／Lead", unknown: "資歷未標示" };
 
@@ -34,6 +36,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
   const { analysisError } = await searchParams;
   const job = await load(id);
   if (!job) notFound();
+  const plans = await listPlans(await getDb(), (await requireUser()).id, { jobId: job.id });
   // query string 只帶錯誤碼，訊息由伺服器端對照（不信任網址裡的文字）
   const failedMessage =
     typeof analysisError === "string" ? (Object.hasOwn(ANALYSIS_ERROR_MESSAGES, analysisError) ? ANALYSIS_ERROR_MESSAGES[analysisError] : ANALYSIS_ERROR_MESSAGES.internal_error) : null;
@@ -171,7 +174,32 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
                 {job.unassessedCount === job.skills.length ? "還沒有任何自評。在下面的差距表選擇你的程度，這裡會依優先分數排出建議順序。" : "已評估的技能都達到要求，沒有需要補強的項目。"}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">學習計畫（Phase 3）完成後，可以把這些項目展開成每週的學習任務。</p>
+            <div className="grid gap-4 bg-card p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div>
+                <p className="section-label">學習計畫</p>
+                {plans.length ? (
+                  <ul className="mt-2 grid gap-1 text-sm">
+                    {plans.map((p) => (
+                      <li key={p.id}>
+                        <Link href={`/plans/${p.id}`} className="hover:dotted-underline">
+                          {p.title}
+                        </Link>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {p.completedTasks}/{p.totalTasks} 完成・{p.status === "active" ? "進行中" : p.status === "completed" ? "已完成" : "已封存"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">依上面的建議順序與你每週可投入的時間（設定頁可改），AI 會排出每週的學習任務與可驗證成果。</p>
+                )}
+              </div>
+              <GeneratePlanButton
+                jobId={job.id}
+                label={plans.length ? "再產生一份計畫" : "產生學習計畫"}
+                disabledReason={job.learningOrder.length ? null : job.unassessedCount === job.skills.length ? "先自評才能產生計畫" : "沒有差距，不需要計畫"}
+              />
+            </div>
           </section>
 
           {/* 差距表 */}

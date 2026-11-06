@@ -134,7 +134,7 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-muted-foreground">學習計畫（Phase 3）完成後，可以把任務加入計畫並追蹤完成狀態。</p>
+          <p className="mt-3 text-xs text-muted-foreground">從職缺頁產生學習計畫時，AI 會優先採用這些實作任務。</p>
         </Section>
       ) : null}
 
