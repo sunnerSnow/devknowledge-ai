@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <div className="grid gap-12">
       <PageHeader eyebrow="設定" title="Settings" description="個人資料會用來調整 AI 產生內容的對象與學習計畫的時數。" />
-      <div className="grid gap-px bg-foreground/10 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
         <Card>
           <CardHeader>
             <CardTitle>個人資料</CardTitle>
@@ -50,12 +50,12 @@ export default async function SettingsPage() {
               <dd>{ai.hourlyLimit} 次</dd>
             </dl>
             {ai.provider === "mock" ? (
-              <p className="border-l-2 border-foreground pl-3 text-xs leading-6 text-muted-foreground">
+              <p className="border-l-2 border-primary pl-3 text-xs leading-6 text-muted-foreground">
                 目前是 mock provider。在 <code className="font-mono">web/.env.local</code> 設定 <code className="font-mono">AI_PROVIDER=gemini</code> 與{" "}
                 <code className="font-mono">GEMINI_API_KEY</code> 後重新啟動，就會使用真正的 AI。
               </p>
             ) : (
-              <p className="border-l-2 border-foreground pl-3 text-xs leading-6 text-muted-foreground">Gemini 免費方案的資料會被 Google 用來改善產品；請不要在技術名詞或職缺內容裡放個人聯絡資料。</p>
+              <p className="border-l-2 border-primary pl-3 text-xs leading-6 text-muted-foreground">Gemini 免費方案的資料會被 Google 用來改善產品；請不要在技術名詞或職缺內容裡放個人聯絡資料。</p>
             )}
           </CardContent>
         </Card>

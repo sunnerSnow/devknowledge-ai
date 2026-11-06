@@ -1,19 +1,18 @@
 import { cn } from "@/lib/utils";
 
-/** 品牌標誌：小字副標在上、字標在下 */
+/** 品牌標誌：青藍色的小圖示＋中文字標，下方一行英文襯線小字 */
 export function Brand({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <svg aria-hidden="true" viewBox="0 0 32 32" className="size-7 shrink-0">
-        <circle cx="8" cy="22" r="4" fill="var(--blob-blue)" />
-        <circle cx="24" cy="22" r="4" fill="var(--blob-yellow)" />
-        <circle cx="16" cy="9" r="4.5" fill="var(--foreground)" />
-        <path d="M11 20.5 14.5 12M21 20.5 17.5 12M12 22h8" stroke="var(--foreground)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    <span className={cn("inline-flex items-center gap-3", className)}>
+      <svg aria-hidden="true" viewBox="0 0 32 32" className="size-8 shrink-0 text-primary">
+        <rect x="5" y="4" width="9" height="24" fill="currentColor" />
+        <rect x="18" y="12" width="9" height="16" fill="currentColor" opacity="0.55" />
+        <circle cx="22.5" cy="7" r="3" fill="currentColor" />
       </svg>
       {!compact ? (
-        <span className="flex flex-col leading-none whitespace-nowrap">
-          <span className="text-[9px] tracking-[0.3em] text-muted-foreground">知識地圖</span>
-          <span className="mt-1 text-[15px] font-medium tracking-[0.04em]">DevKnowledge AI</span>
+        <span className="flex min-w-0 flex-col leading-none">
+          <span className="text-[15px] font-medium tracking-[0.1em] whitespace-nowrap">DevKnowledge AI</span>
+          <span className="mt-1.5 text-[11px] tracking-[0.2em] text-muted-foreground">工程師的知識地圖</span>
         </span>
       ) : null}
     </span>

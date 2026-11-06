@@ -28,11 +28,11 @@ export function LoginForm() {
   return (
     <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
       <Tabs value={intent} onValueChange={(v) => setIntent(v === "signup" ? "signup" : "signin")}>
-        <TabsList variant="line" className="w-full gap-6 border-b border-dotted border-foreground/30 p-0">
-          <TabsTrigger value="signin" className="rounded-none px-0 pb-2 tracking-[0.08em] data-[state=active]:dotted-underline data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+        <TabsList className="h-auto w-full gap-0 border border-border bg-card p-0">
+          <TabsTrigger value="signin" className="h-9 flex-1 rounded-none font-normal tracking-[0.16em] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">
             登入
           </TabsTrigger>
-          <TabsTrigger value="signup" className="rounded-none px-0 pb-2 tracking-[0.08em] data-[state=active]:dotted-underline data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+          <TabsTrigger value="signup" className="h-9 flex-1 rounded-none font-normal tracking-[0.16em] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">
             註冊
           </TabsTrigger>
         </TabsList>

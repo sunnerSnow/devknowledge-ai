@@ -1,10 +1,9 @@
 import { ArrowRight, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TOPIC_MAX_LENGTH } from "@/lib/knowledge/slug";
 import { cn } from "@/lib/utils";
 
-/** 全站搜尋框：純 GET 表單，不需要 JavaScript 也能用 */
+/** 全站搜尋框：白色直角輸入框＋青藍色送出鈕；純 GET 表單，不需要 JavaScript 也能用 */
 export function SearchForm({ defaultValue = "", size = "default", autoFocus = false, className }: { defaultValue?: string; size?: "default" | "lg"; autoFocus?: boolean; className?: string }) {
   const large = size === "lg";
   return (
@@ -13,7 +12,7 @@ export function SearchForm({ defaultValue = "", size = "default", autoFocus = fa
         輸入技術名詞
       </label>
       <div className="relative flex-1">
-        <Search className={cn("pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted-foreground", large ? "size-5" : "size-4")} aria-hidden="true" />
+        <Search className={cn("pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted-foreground", large ? "size-5" : "size-4")} aria-hidden="true" strokeWidth={1.5} />
         <Input
           id="knowledge-search"
           name="q"
@@ -23,13 +22,16 @@ export function SearchForm({ defaultValue = "", size = "default", autoFocus = fa
           maxLength={TOPIC_MAX_LENGTH}
           autoComplete="off"
           autoFocus={autoFocus}
-          className={cn("border-0 bg-card tracking-[0.04em]", large ? "h-14 pl-12 text-base" : "h-11 pl-10")}
+          className={cn("border-r-0 bg-card", large ? "h-14 pl-12 text-base" : "h-12 pl-11")}
         />
       </div>
-      <Button type="submit" size={large ? "lg" : "default"} className={cn("gap-2 tracking-[0.08em]", large ? "h-14 px-6" : "h-11 px-5")} aria-label="搜尋">
-        搜尋
-        <ArrowRight aria-hidden="true" />
-      </Button>
+      <button
+        type="submit"
+        aria-label="搜尋"
+        className={cn("inline-flex shrink-0 items-center justify-center bg-primary text-primary-foreground transition-colors outline-none hover:bg-primary-strong focus-visible:focus-ring", large ? "w-16" : "w-14")}
+      >
+        <ArrowRight className={large ? "size-5" : "size-4"} aria-hidden="true" strokeWidth={1.5} />
+      </button>
     </form>
   );
 }

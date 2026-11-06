@@ -37,7 +37,7 @@ export default async function JobsPage() {
           <JobList jobs={active} />
           {archived.length ? (
             <section className="grid gap-4">
-              <p className="section-label">已封存</p>
+              <p className="section-sub">已封存</p>
               <JobList jobs={archived} muted />
             </section>
           ) : null}
@@ -53,8 +53,8 @@ function JobList({ jobs, muted = false }: { jobs: Awaited<ReturnType<typeof list
     <ul className="grid gap-4 md:grid-cols-2">
       {jobs.map((j) => (
         <li key={j.id} className="flex">
-          <Link href={`/jobs/${j.id}`} className={`group flex flex-1 flex-col bg-card p-6 transition-colors hover:bg-white ${muted ? "opacity-70" : ""}`}>
-            <div className="flex items-start justify-between gap-3 text-[11px] tracking-[0.12em] text-muted-foreground">
+          <Link href={`/jobs/${j.id}`} className={`group flex flex-1 flex-col panel p-6 transition-colors hover:bg-card/70 ${muted ? "opacity-70" : ""}`}>
+            <div className="flex items-start justify-between gap-3 text-xs tracking-[0.1em] text-muted-foreground">
               <span className="truncate">{j.company ?? "公司未填"}</span>
               <span className="shrink-0">{j.seniority ? SENIORITY_LABELS[j.seniority] : "未分析"}</span>
             </div>

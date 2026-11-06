@@ -42,7 +42,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
     <div className="grid gap-12">
       <ViewTracker nodeId={detail.id} />
       <header className="grid gap-6">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] tracking-[0.12em] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs tracking-[0.1em] text-muted-foreground">
           <CategoryBadge category={detail.category} />
           <span>更新於 {updated}</span>
           {detail.contentMeta ? <span>v{detail.contentMeta.version}</span> : null}
@@ -50,8 +50,8 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            {detail.englishName && detail.englishName !== detail.name ? <p className="section-label">{detail.englishName}</p> : null}
-            <h1 className="mt-2 text-[clamp(36px,5vw,64px)] leading-none font-medium tracking-[0.03em]">{detail.name}</h1>
+            {detail.englishName && detail.englishName !== detail.name ? <p className="section-sub">{detail.englishName}</p> : null}
+            <h1 className="mt-2 text-4xl leading-relaxed font-medium tracking-[0.12em] sm:text-5xl">{detail.name}</h1>
             {detail.aliases.length ? <p className="mt-4 text-xs tracking-[0.08em] text-muted-foreground">別名：{detail.aliases.join("、")}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -60,7 +60,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
           </div>
         </div>
         {detail.generating ? <GeneratingWatcher slug={detail.slug} /> : null}
-        {detail.content ? <p className="border-l-2 border-foreground pl-3 text-xs leading-6 text-muted-foreground">此頁內容由 AI 產生（{providerLabel}），版本、API 與價格等易變資訊請依官方文件確認。</p> : null}
+        {detail.content ? <p className="border-l-2 border-primary pl-3 text-xs leading-6 text-muted-foreground">此頁內容由 AI 產生（{providerLabel}），版本、API 與價格等易變資訊請依官方文件確認。</p> : null}
       </header>
 
       {detail.content ? (
@@ -81,7 +81,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
             <KnowledgeArticle content={detail.content} />
           </div>
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <p className="section-label mb-4">知識關聯</p>
+            <p className="section-sub mb-4">知識關聯</p>
             <RelationsPanel detail={detail} />
           </aside>
         </div>
@@ -103,7 +103,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
 
       {!detail.content && (detail.relations.length || detail.neededBy.length) ? (
         <section className="max-w-md">
-          <p className="section-label mb-4">知識關聯</p>
+          <p className="section-sub mb-4">知識關聯</p>
           <RelationsPanel detail={detail} />
         </section>
       ) : null}

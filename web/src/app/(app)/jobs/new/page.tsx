@@ -10,7 +10,7 @@ export default async function NewJobPage() {
   return (
     <div className="grid gap-10">
       <PageHeader eyebrow="新增職缺" title="New Job" description="貼上整份職缺也可以。AI 只分析職缺需求，不會推定你的能力；分析完成後再逐項自評。" />
-      <div className="max-w-3xl bg-card p-6 sm:p-8">
+      <div className="max-w-3xl panel p-6 sm:p-8">
         <JobForm mode="create" />
       </div>
     </div>

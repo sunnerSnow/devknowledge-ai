@@ -37,8 +37,8 @@ export function AddSkillForm() {
       <label className="sr-only" htmlFor="new-skill-name">
         技能名稱
       </label>
-      <Input id="new-skill-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="技能名稱，例如 TypeScript" maxLength={80} className="h-10 bg-background" required />
-      <select aria-label="程度" value={level} onChange={(e) => setLevel(e.target.value)} className="h-10 border border-input bg-background px-2 text-sm">
+      <Input id="new-skill-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="技能名稱，例如 TypeScript" maxLength={80} required />
+      <select aria-label="程度" value={level} onChange={(e) => setLevel(e.target.value)} className="h-10 border border-border bg-card px-3 text-sm outline-none focus-visible:focus-ring">
         <option value="">未評估</option>
         {SKILL_LEVELS.map((l) => (
           <option key={l} value={l}>

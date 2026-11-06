@@ -13,38 +13,41 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", hint: "總覽" },
+  { href: "/", label: "Top", hint: "總覽" },
   { href: "/knowledge", label: "Knowledge", hint: "知識探索" },
-  { href: "/jobs", label: "Job Analyzer", hint: "職缺分析" },
+  { href: "/jobs", label: "Jobs", hint: "職缺分析" },
   { href: "/plans", label: "Plans", hint: "學習計畫" },
   { href: "/practice", label: "Practice", hint: "面試練習", soon: true },
-  { href: "/skills", label: "My Skills", hint: "技能地圖" },
+  { href: "/skills", label: "Skills", hint: "技能地圖" },
   { href: "/settings", label: "Settings", hint: "設定" },
 ];
 
-/** 文字式導覽：目前頁用虛線底線標示 */
+/** 純文字導覽：中文為主、英文襯線小字在後；目前頁是青藍色加細底線 */
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="主選單" className="grid gap-1">
-      {NAV_ITEMS.map((item) => {
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn("group flex items-start justify-between gap-3 py-2.5 text-[15px] transition-colors", active ? "text-foreground" : "text-foreground/60 hover:text-foreground")}
-          >
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className={cn("font-medium tracking-[0.04em] whitespace-nowrap", active && "dotted-underline")}>{item.label}</span>
-              <span className="text-[11px] tracking-[0.14em] text-muted-foreground">{item.hint}</span>
-            </span>
-            {item.soon ? <span className="mt-1 shrink-0 text-[10px] tracking-[0.12em] text-muted-foreground">SOON</span> : null}
-          </Link>
-        );
-      })}
+    <nav aria-label="主選單">
+      <ul className="grid gap-5">
+        {NAV_ITEMS.map((item) => {
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn("inline-flex flex-col gap-1 text-[15px] tracking-[0.14em] transition-colors outline-none focus-visible:focus-ring", active ? "text-primary" : "text-foreground hover:text-primary")}
+              >
+                <span className={cn(active && "dotted-underline")}>
+                  {item.hint}
+                  {item.soon ? <span className="ml-1 text-[11px] tracking-[0.1em] text-muted-foreground">（準備中）</span> : null}
+                </span>
+                <span className="font-display text-xs tracking-[0.12em] text-muted-foreground">{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

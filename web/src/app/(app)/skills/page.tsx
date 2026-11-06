@@ -47,9 +47,9 @@ export default async function SkillsPage({ searchParams }: PageProps<"/skills">)
           <p className="text-xs tracking-[0.08em] text-muted-foreground">
             {skills.length} 項技能，已評估 {assessed} 項
           </p>
-          <ul className="grid gap-px bg-foreground/10">
+          <ul className="grid gap-3">
             {skills.map((s) => (
-              <li key={s.id} className="grid gap-4 bg-card p-5 md:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)_auto] md:items-center">
+              <li key={s.id} className="grid gap-4 border border-border bg-card p-4 md:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)_auto] md:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {s.knowledge ? (
@@ -59,7 +59,7 @@ export default async function SkillsPage({ searchParams }: PageProps<"/skills">)
                     ) : (
                       <span className="text-base font-medium tracking-[0.02em]">{s.skillName}</span>
                     )}
-                    {s.category ? <span className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{CATEGORY_LABELS[s.category] ?? s.category}</span> : null}
+                    {s.category ? <span className="text-xs tracking-[0.1em] text-muted-foreground uppercase">{CATEGORY_LABELS[s.category] ?? s.category}</span> : null}
                     {s.knowledge && s.knowledge.status !== "stub" ? <ProgressBadge status={(s.knowledge.progress as ProgressStatus | null) ?? null} /> : null}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -83,8 +83,8 @@ export default async function SkillsPage({ searchParams }: PageProps<"/skills">)
         />
       )}
 
-      <section className="max-w-xl bg-card p-6">
-        <p className="section-label">新增技能</p>
+      <section className="max-w-xl panel p-6">
+        <p className="section-sub">新增技能</p>
         <AddSkillForm />
       </section>
     </div>

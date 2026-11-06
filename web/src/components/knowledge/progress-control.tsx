@@ -8,7 +8,7 @@ import { PROGRESS_LABELS } from "@/components/knowledge/progress-badge";
 import { PROGRESS_STATUSES, type ProgressStatus } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
-/** 標記學習狀態：未學習／學習中／已理解／已實作 */
+/** 標記學習狀態：未學習／學習中／已理解／已實作（一排文字，目前的那個是青藍底） */
 export function ProgressControl({ nodeId, slug, status }: { nodeId: string; slug: string; status: ProgressStatus }) {
   const router = useRouter();
   const [current, setCurrent] = useState<ProgressStatus>(status);
@@ -33,7 +33,7 @@ export function ProgressControl({ nodeId, slug, status }: { nodeId: string; slug
 
   return (
     <div className="grid gap-2">
-      <div role="radiogroup" aria-label="學習狀態" className="inline-flex flex-wrap gap-px bg-foreground/20">
+      <div role="radiogroup" aria-label="學習狀態" className="inline-flex flex-wrap border border-border bg-card">
         {PROGRESS_STATUSES.map((s) => {
           const active = s === current;
           return (
@@ -45,11 +45,11 @@ export function ProgressControl({ nodeId, slug, status }: { nodeId: string; slug
               disabled={pending}
               onClick={() => choose(s)}
               className={cn(
-                "inline-flex items-center gap-1 px-3 py-2 text-[13px] tracking-[0.06em] transition-colors disabled:opacity-60",
-                active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
+                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] tracking-[0.12em] transition-colors outline-none focus-visible:focus-ring disabled:opacity-60",
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-primary-strong",
               )}
             >
-              {active ? <Check className="size-3.5" aria-hidden="true" /> : null}
+              {active ? <Check className="size-3.5" aria-hidden="true" strokeWidth={2} /> : null}
               {PROGRESS_LABELS[s]}
             </button>
           );

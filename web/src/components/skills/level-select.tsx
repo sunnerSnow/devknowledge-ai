@@ -58,8 +58,8 @@ export function LevelSelect({
         disabled={pending}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "border border-input bg-card px-2 tracking-[0.02em] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60",
-          size === "sm" ? "h-8 text-xs" : "h-9 text-sm",
+          "rounded-full border border-border bg-card px-3 tracking-[0.02em] outline-none focus-visible:focus-ring disabled:opacity-60",
+          size === "sm" ? "h-8 text-xs" : "h-10 text-sm",
           current === "" ? "text-muted-foreground" : "text-foreground",
         )}
       >

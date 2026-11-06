@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -35,112 +36,98 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* 強調色：只用在狀態標籤與裝飾色塊，不用在大面積 */
-  --color-gold: var(--gold);
-  --color-gold-foreground: var(--gold-foreground);
-  --color-teal: var(--teal);
-  --color-teal-foreground: var(--teal-foreground);
-  --color-sky: var(--sky);
-  --color-sky-foreground: var(--sky-foreground);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* 少量的輔助色：狀態標籤用 */
+  --color-soft-yellow: var(--soft-yellow);
+  --color-soft-blue: var(--soft-blue);
+  --color-code: var(--code);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
 }
 
 /*
- * 視覺語言：
- * 暖灰底＋細顆粒紋理、近乎單色（黑字、白卡片、灰說明）、直角、字距略寬、留白大；
- * 色彩只出現在少數玻璃感漸層色塊與狀態標籤。
+ * 視覺語言（2026-11-06 第三版）：
+ * 淡青綠底、深灰細字、青藍色標題與底線連結；白色面板沒有邊框、沒有圓角、沒有陰影；
+ * 字距寬、行距高、留白大；英文小標用襯線字。安靜、像事務所的介紹頁。
  */
 :root {
   --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Cormorant Garamond", "Times New Roman", Georgia, serif;
   --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-  --background: #e9e9e4;
-  --foreground: #111111;
+  --background: #f0f9f9;
+  --foreground: #4e4e4e;
   --card: #ffffff;
-  --card-foreground: #111111;
+  --card-foreground: #4e4e4e;
   --popover: #ffffff;
-  --popover-foreground: #111111;
-  --primary: #111111;
+  --popover-foreground: #4e4e4e;
+  --primary: #1c7a8f;
+  --primary-strong: #166a7c;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f0;
-  --secondary-foreground: #111111;
-  --muted: #dcdcd6;
-  --muted-foreground: #7c7c7c;
-  --accent: #f4f4f0;
-  --accent-foreground: #111111;
-  --destructive: #b42318;
-  --border: #d3d3cc;
-  --input: #c6c6bf;
-  --ring: #111111;
-  --gold: #e8c64a;
-  --gold-foreground: #3d3000;
-  --teal: #2c8c83;
-  --teal-foreground: #ffffff;
-  --sky: #4f7be0;
-  --sky-foreground: #ffffff;
-  /* 裝飾色塊 */
-  --blob-blue: #4f7be0;
-  --blob-green: #86d28f;
-  --blob-pink: #c9357e;
-  --blob-yellow: #e8c64a;
-  --chart-1: #111111;
-  --chart-2: #4f7be0;
-  --chart-3: #e8c64a;
-  --chart-4: #7c7c7c;
-  --chart-5: #c9357e;
+  --secondary: #e1f0f0;
+  --secondary-foreground: #4e4e4e;
+  --muted: #e1f0f0;
+  --muted-foreground: #666666;
+  --accent: #cee7ea;
+  --accent-foreground: #4e4e4e;
+  --destructive: #b4453a;
+  --border: #cee7ea;
+  --input: #cee7ea;
+  --ring: #1c7a8f;
+  --code: #35414a;
+  --soft-yellow: #f6efd6;
+  --soft-blue: #cee7ea;
+  --chart-1: #1c7a8f;
+  --chart-2: #4e4e4e;
+  --chart-3: #cee7ea;
+  --chart-4: #9fb8bd;
+  --chart-5: #e1f0f0;
   --radius: 0rem;
   --sidebar: transparent;
-  --sidebar-foreground: #111111;
-  --sidebar-primary: #111111;
+  --sidebar-foreground: #4e4e4e;
+  --sidebar-primary: #1c7a8f;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffffff;
-  --sidebar-accent-foreground: #111111;
-  --sidebar-border: #d3d3cc;
-  --sidebar-ring: #111111;
+  --sidebar-accent: #e1f0f0;
+  --sidebar-accent-foreground: #4e4e4e;
+  --sidebar-border: #cee7ea;
+  --sidebar-ring: #1c7a8f;
 }
 
 .dark {
-  --background: #141414;
-  --foreground: #ececea;
-  --card: #1d1d1d;
-  --card-foreground: #ececea;
-  --popover: #1d1d1d;
-  --popover-foreground: #ececea;
-  --primary: #ececea;
-  --primary-foreground: #111111;
-  --secondary: #262626;
-  --secondary-foreground: #ececea;
-  --muted: #2a2a2a;
-  --muted-foreground: #9a9a9a;
-  --accent: #262626;
-  --accent-foreground: #ececea;
-  --destructive: #f87171;
-  --border: #333333;
-  --input: #3a3a3a;
-  --ring: #ececea;
-  --gold: #e8c64a;
-  --gold-foreground: #3d3000;
-  --teal: #3aa89d;
-  --teal-foreground: #0b1a18;
-  --sky: #6b93ea;
-  --sky-foreground: #0b1430;
-  --sidebar: transparent;
-  --sidebar-foreground: #ececea;
-  --sidebar-primary: #ececea;
-  --sidebar-primary-foreground: #111111;
-  --sidebar-accent: #1d1d1d;
-  --sidebar-accent-foreground: #ececea;
-  --sidebar-border: #333333;
-  --sidebar-ring: #ececea;
+  --background: #16262a;
+  --foreground: #e3ebeb;
+  --card: #1f3338;
+  --card-foreground: #e3ebeb;
+  --popover: #1f3338;
+  --popover-foreground: #e3ebeb;
+  --primary: #5fb6c9;
+  --primary-strong: #7cc7d6;
+  --primary-foreground: #0f1c1f;
+  --secondary: #24393f;
+  --secondary-foreground: #e3ebeb;
+  --muted: #24393f;
+  --muted-foreground: #a7b7ba;
+  --accent: #2e4a51;
+  --accent-foreground: #e3ebeb;
+  --destructive: #ef8a80;
+  --border: #2e4a51;
+  --input: #2e4a51;
+  --ring: #5fb6c9;
+  --code: #0f1c1f;
+  --soft-yellow: #3d3a2a;
+  --soft-blue: #2e4a51;
+  --sidebar-foreground: #e3ebeb;
+  --sidebar-accent: #24393f;
+  --sidebar-accent-foreground: #e3ebeb;
+  --sidebar-border: #2e4a51;
 }
 
 @layer base {
@@ -149,29 +136,18 @@
   }
   html {
     @apply font-sans;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.08em;
   }
   body {
     @apply bg-background text-foreground;
     text-rendering: optimizeLegibility;
-    position: relative;
-  }
-  /* 細顆粒紋理：放在內容之下，白色卡片不受影響 */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.55;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   h1,
   h2,
   h3,
   h4 {
     font-weight: 500;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.1em;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -179,67 +155,47 @@
   }
 }
 
-/* 區塊標題：小字中文標籤＋大字英文標題 */
-.section-label {
-  @apply text-xs font-medium tracking-[0.18em] text-foreground/80;
-}
-.section-title {
-  @apply text-4xl leading-none font-medium tracking-[0.02em] sm:text-5xl;
+/* 白色面板：沒有邊框、沒有圓角、沒有陰影。
+ * 注意：它會排在 bg-* 之後而蓋掉底色，要別的底色就不要加 panel，直接寫 bg-*。 */
+@utility panel {
+  background: var(--card);
 }
 
-/* 裝飾色塊：玻璃感漸層，放在相對定位的容器裡 */
-.blob {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(28px) saturate(1.1);
-  opacity: 0.75;
-  mix-blend-mode: multiply;
+/* 區塊標題：英文襯線大字（青藍）＋中文小字（青藍、字距寬）。
+ * 用 @utility 定義，呼叫端加 text-*／tracking-* 才蓋得過去（寫在 layer 外會贏過 utilities）。 */
+@utility section-label {
+  @apply font-display text-[1.75rem] leading-none font-normal tracking-[0.04em] text-primary;
 }
-.blob-blue {
-  background: radial-gradient(circle at 30% 30%, var(--blob-blue) 0%, color-mix(in oklab, var(--blob-blue), transparent 65%) 55%, transparent 72%);
+@utility section-sub {
+  @apply text-sm tracking-[0.2em] text-primary;
 }
-.blob-green {
-  background: radial-gradient(circle at 35% 35%, var(--blob-green) 0%, color-mix(in oklab, var(--blob-green), transparent 60%) 55%, transparent 72%);
-}
-.blob-pink {
-  background: radial-gradient(circle at 40% 30%, var(--blob-pink) 0%, color-mix(in oklab, var(--blob-pink), transparent 65%) 55%, transparent 72%);
-}
-.blob-yellow {
-  background: radial-gradient(circle at 40% 40%, var(--blob-yellow) 0%, color-mix(in oklab, var(--blob-yellow), transparent 60%) 55%, transparent 72%);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .blob {
-    animation: blob-drift 18s ease-in-out infinite alternate;
-  }
-  .blob:nth-child(2) {
-    animation-duration: 24s;
-    animation-delay: -6s;
-  }
-  .blob:nth-child(3) {
-    animation-duration: 21s;
-    animation-delay: -12s;
-  }
-}
-@keyframes blob-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(4%, -3%, 0) scale(1.06);
-  }
+@utility section-title {
+  @apply text-2xl leading-relaxed font-medium tracking-[0.12em] sm:text-3xl;
 }
 
-/* 虛線底線（導覽的目前頁、強調連結）；用 @utility 定義才能搭配 hover:、data-[...]: 等變體與 @apply */
+/* 鍵盤焦點：青藍 2px 外框 */
+@utility focus-ring {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 底線連結（導覽的目前頁、強調連結）：細的青藍底線 */
 @utility dotted-underline {
-  text-decoration: underline dotted;
-  text-underline-offset: 0.45em;
-  text-decoration-thickness: 1.5px;
+  text-decoration: underline;
+  text-underline-offset: 0.4em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--primary);
+}
+
+/* 直書（登入頁標語） */
+@utility vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 /* 知識頁的 Markdown 內容 */
 .prose-dk {
-  @apply text-[15px] leading-8 text-foreground;
+  @apply text-[15px] leading-9 tracking-[0.1em] text-foreground;
 }
 .prose-dk > * + * {
   margin-top: 1em;
@@ -248,7 +204,7 @@
 .prose-dk h2,
 .prose-dk h3,
 .prose-dk h4 {
-  @apply font-medium text-foreground;
+  @apply font-medium text-primary;
   margin-top: 1.5em;
 }
 .prose-dk h1 {
@@ -271,19 +227,19 @@
   margin-top: 0.3em;
 }
 .prose-dk a {
-  @apply dotted-underline text-foreground;
+  @apply dotted-underline text-primary;
 }
 .prose-dk strong {
   @apply font-medium text-foreground;
 }
 .prose-dk code:not(pre code) {
-  @apply bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+  @apply bg-secondary px-1.5 py-0.5 font-mono text-[0.85em] tracking-normal;
 }
 .prose-dk pre {
-  @apply overflow-x-auto bg-primary p-4 font-mono text-[13px] leading-6 text-white;
+  @apply overflow-x-auto bg-code p-4 font-mono text-[13px] leading-6 tracking-normal text-white;
 }
 .prose-dk blockquote {
-  @apply border-l-2 border-foreground pl-4 text-muted-foreground;
+  @apply border-l-2 border-primary pl-4 text-muted-foreground;
 }
 .prose-dk table {
   @apply w-full border-collapse text-sm;

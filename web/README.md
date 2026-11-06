@@ -102,7 +102,7 @@ tests/                    Vitest
 
 ### 視覺
 
-暖灰底＋細顆粒紋理、近乎單色、直角、字距略寬、留白大；主要 CTA 是黑底＋虛線分隔＋箭頭（`CtaButton`），區塊標題是「中文小標＋英文大標」（`PageHeader`／`SectionHeader`），顏色只用在進度標籤與登入頁／Dashboard 的漸層色塊。token 都在 `src/app/globals.css`。
+整頁淡青綠底、深灰細字、青藍色標題與底線連結；白色面板沒有邊框、圓角、陰影（`panel`）；按鈕直角（`Button`／`CtaButton`）；區塊標題是「英文襯線大字＋中文小字」（`PageHeader`／`SectionHeader`）；字距寬、留白大。字體 Noto Sans TC ＋ Cormorant Garamond（英文襯線）。token 與工具類別都在 `src/app/globals.css`。
 
 ### 重要設計
 

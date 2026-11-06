@@ -41,7 +41,7 @@ export default async function PlanDetailPage({ params }: PageProps<"/plans/[id]"
   return (
     <div className="grid gap-12">
       <header className="grid gap-6">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] tracking-[0.12em] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs tracking-[0.1em] text-muted-foreground">
           <Link href="/plans" className="hover:dotted-underline">
             ← 全部計畫
           </Link>
@@ -56,26 +56,26 @@ export default async function PlanDetailPage({ params }: PageProps<"/plans/[id]"
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <p className="section-label">學習計畫</p>
-            <h1 className="mt-2 text-[clamp(30px,4vw,52px)] leading-[1.15] font-medium tracking-[0.03em]">{plan.title}</h1>
+            <p className="section-sub">學習計畫</p>
+            <h1 className="mt-2 text-3xl leading-relaxed font-medium tracking-[0.12em] sm:text-4xl">{plan.title}</h1>
             {plan.goal ? <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">{plan.goal}</p> : null}
           </div>
           <PlanActions planId={plan.id} status={plan.status} />
         </div>
-        <div className="grid gap-px bg-foreground/10 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-4">
           <Stat label="週數" value={String(plan.weekCount)} />
           <Stat label="任務" value={`${plan.completedTasks} / ${plan.totalTasks}`} />
           <Stat label="完成率" value={`${pct}%`} />
           <Stat label="剩餘時數" value={`約 ${Math.round(plan.remainingMinutes / 60)} 小時`} />
         </div>
-        {plan.summary ? <p className="border-l-2 border-foreground pl-3 text-sm leading-7 whitespace-pre-line text-foreground/80">{plan.summary}</p> : null}
+        {plan.summary ? <p className="border-l-2 border-primary pl-3 text-sm leading-7 whitespace-pre-line text-foreground/80">{plan.summary}</p> : null}
       </header>
 
       <section className="grid gap-10">
         <SectionHeader eyebrow="週次任務" title="Weeks" aside={<span className="text-muted-foreground">完成任務會回寫知識頁的學習狀態</span>} />
         {plan.weeks.map((w) => (
           <section key={w.week} aria-labelledby={`week-${w.week}`} className={cn("grid gap-4", w.done && "opacity-70")}>
-            <div className="flex items-baseline justify-between gap-4 border-b border-dotted border-foreground/30 pb-3">
+            <div className="flex items-baseline justify-between gap-4 border-b border-border pb-3">
               <h3 id={`week-${w.week}`} className="flex items-baseline gap-3 text-lg font-medium tracking-[0.04em]">
                 <span className="text-xs tracking-[0.12em] text-muted-foreground tabular-nums">WEEK {String(w.week).padStart(2, "0")}</span>
                 {w.week === plan.currentWeek && plan.status === "active" ? <span className="text-xs tracking-[0.12em] text-muted-foreground">本週</span> : null}
@@ -84,11 +84,11 @@ export default async function PlanDetailPage({ params }: PageProps<"/plans/[id]"
                 約 {w.minutes} 分鐘・{w.tasks.filter((t) => t.status === "completed").length}/{w.tasks.length} 完成
               </span>
             </div>
-            <ol className="grid gap-px bg-foreground/10">
+            <ol className="grid gap-3">
               {w.tasks.map((t) => (
-                <li key={t.id} className={cn("grid gap-4 bg-card p-5 lg:grid-cols-[minmax(0,1fr)_auto]", (t.status === "completed" || t.status === "skipped") && "bg-card/70")}>
+                <li key={t.id} className={cn("grid gap-4 border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_auto]", (t.status === "completed" || t.status === "skipped") && "bg-secondary")}>
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] tracking-[0.12em] text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tracking-[0.1em] text-muted-foreground">
                       <span>{TYPE_LABELS[t.taskType]}</span>
                       <span>約 {t.estimatedMinutes} 分鐘</span>
                       {t.skillName ? <span>{t.skillName}</span> : null}
@@ -126,9 +126,9 @@ export default async function PlanDetailPage({ params }: PageProps<"/plans/[id]"
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-card px-5 py-4">
-      <p className="text-[11px] tracking-[0.12em] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-medium tabular-nums tracking-[0.02em]">{value}</p>
+    <div className="panel px-5 py-4">
+      <p className="text-xs font-medium tracking-[0.1em] text-foreground/70">{label}</p>
+      <p className="mt-1 font-display text-xl font-normal tabular-nums tracking-[0.02em]">{value}</p>
     </div>
   );
 }

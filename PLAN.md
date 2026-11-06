@@ -172,14 +172,14 @@ Supabase 專案可以晚點再建（Phase 1 完成、本機驗證後）；migrat
 
 ---
 
-## 5a. 視覺方向（2026-11-06 定案）
+## 5a. 視覺方向（2026-11-06 第三版定案；前兩版的暖灰單色風與貼紙風都已廢）
 
-- 暖灰底 `#E9E9E4` ＋ SVG 細顆粒紋理（`body::before`，在內容之下，白卡片不受影響）；近乎單色：黑字、白卡片、灰說明。
-- 直角（`--radius: 0`）；主要 CTA 是黑底、右側虛線分隔＋箭頭（`components/ui/cta-button.tsx`）；一般按鈕黑底或 outline。
-- 字體 Noto Sans TC（瀏覽器端 Google Fonts；next/font 會在 build 時下載，開發機連不到就失敗），標題 500、字距 0.02–0.04em。
-- 標題結構：小字中文標籤（`.section-label`）＋大字英文標題（`.section-title`）；導覽英文為主、中文小字在下，目前頁用虛線底線。
-- 色彩只用在：進度標籤（未學習灰、學習中黃、已理解藍、已實作黑）與登入頁／Dashboard 的玻璃感漸層色塊（`.blob`，`mix-blend-mode: multiply`、尊重 reduced-motion）。
-- 規格 11 節原本的藍綠金配色已不再使用。
+- 整頁淡青綠底 `--background #F0F9F9`、深灰細字 `#4E4E4E`、青藍色 `--primary #1F8399` 用在標題、連結底線、主要按鈕；白色面板（`@utility panel`）沒有邊框、沒有圓角（`--radius: 0`）、沒有陰影；分隔線是淡青 `#CEE7EA` 細線。
+- 字體：Noto Sans TC 400/500（標題也只用 500，不用粗體）＋ Cormorant Garamond 當英文襯線字（`--font-display`），都走瀏覽器端 Google Fonts；全站字距 0.08em、標題 0.1–0.16em、內文行高 8–9。
+- 標題結構：英文襯線大字（青藍）在上、中文小字（青藍、字距 0.2em，`.section-sub`）在下；`PageHeader`／`SectionHeader` 參數名沿用（`eyebrow` 中文、`title` 英文）。
+- 版面：桌機左側純文字導覽（中文一行、英文襯線小字一行，目前頁青藍加底線），沒有底色；內容區 max-w-5xl；手機頂欄＋抽屜。登入頁的標語在大螢幕用直書（`.vertical-text`）。
+- 元件：按鈕直角（主要青藍實底、次要青藍細框白底、CtaButton 青藍實底＋細箭頭）；輸入框淡青底細框；下拉與單選群組同樣直角細框；狀態標籤小矩形（未學習淡青、學習中淡黃、已理解淺藍、已實作青藍實底）；編號用襯線數字。
+- 無障礙：鍵盤焦點 `@utility focus-ring`（青藍 2px 外框）；說明小字最小 11–12px；深色模式 token 有對應的深青版本但尚未細調（目前沒有切換機制）。
 
 ## 5b. Phase 2 職缺分析（2026-11-06 完成）
 

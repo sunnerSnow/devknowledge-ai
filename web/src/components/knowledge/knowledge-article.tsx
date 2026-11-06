@@ -45,7 +45,7 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
           {s.key_points.length ? (
             <ul className="mt-5 flex flex-wrap gap-2" aria-label="重點">
               {s.key_points.map((p, j) => (
-                <li key={j} className="border border-foreground/30 px-3 py-1 text-xs tracking-[0.06em]">
+                <li key={j} className="bg-secondary px-3 py-1 text-xs tracking-[0.1em]">
                   {p}
                 </li>
               ))}
@@ -75,9 +75,9 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
 
       {content.comparisons.length ? (
         <Section id="comparisons" num={num("comparisons")} title="與相似技術比較">
-          <dl className="grid gap-px bg-foreground/10">
+          <dl className="grid gap-3">
             {content.comparisons.map((c, i) => (
-              <div key={i} className="bg-card p-5">
+              <div key={i} className="panel p-5">
                 <dt className="font-medium tracking-[0.04em]">vs. {c.name}</dt>
                 <dd className="mt-2 text-sm leading-7 text-foreground/85">{c.difference}</dd>
               </div>
@@ -90,7 +90,7 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
         <Section id="misconceptions" num={num("misconceptions")} title="常見誤解">
           <ul className="grid gap-3">
             {content.common_misconceptions.map((m, i) => (
-              <li key={i} className="border-l-2 border-foreground pl-4 text-sm leading-7">
+              <li key={i} className="border-l-2 border-primary pl-4 text-sm leading-7">
                 {m}
               </li>
             ))}
@@ -100,17 +100,17 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
 
       {content.interview_topics.length ? (
         <Section id="interview" num={num("interview")} title="面試重點">
-          <ol className="grid gap-px bg-foreground/10">
+          <ol className="grid gap-3">
             {content.interview_topics.map((t, i) => (
-              <li key={i} className="bg-card p-5">
+              <li key={i} className="panel p-5">
                 <p className="font-medium tracking-[0.02em]">
                   <span className="mr-3 text-xs tracking-[0.12em] text-muted-foreground">Q{i + 1}</span>
                   {t.question}
                 </p>
-                <p className="mt-3 text-[11px] tracking-[0.12em] text-muted-foreground">評量重點</p>
+                <p className="mt-3 text-xs tracking-[0.1em] text-muted-foreground">評量重點</p>
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {t.evaluation_points.map((p, j) => (
-                    <li key={j} className="bg-secondary px-2 py-0.5 text-xs">
+                    <li key={j} className="bg-secondary px-2.5 py-0.5 text-xs tracking-[0.08em]">
                       {p}
                     </li>
                   ))}
@@ -123,9 +123,9 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
 
       {content.learning_tasks.length ? (
         <Section id="tasks" num={num("tasks")} title="實作任務">
-          <ul className="grid gap-px bg-foreground/10">
+          <ul className="grid gap-3">
             {content.learning_tasks.map((t, i) => (
-              <li key={i} className="flex items-start justify-between gap-4 bg-card p-5">
+              <li key={i} className="flex items-start justify-between gap-4 panel p-5">
                 <div>
                   <p className="font-medium tracking-[0.02em]">{t.title}</p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">{t.description}</p>
@@ -157,9 +157,9 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
 function Section({ id, num, title, children }: { id: string; num: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
-      <div className="mb-5 flex items-baseline gap-4 border-b border-dotted border-foreground/30 pb-3">
-        <span className="text-xs tracking-[0.12em] text-muted-foreground tabular-nums">{num}</span>
-        <h2 id={`${id}-title`} className="text-xl font-medium tracking-[0.04em]">
+      <div className="mb-6 flex items-baseline gap-4 border-b border-border pb-3">
+        <span className="font-display text-2xl leading-none text-primary tabular-nums">{num}</span>
+        <h2 id={`${id}-title`} className="text-xl font-medium tracking-[0.12em] text-primary">
           {title}
         </h2>
       </div>

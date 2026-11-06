@@ -9,18 +9,18 @@ export const PROGRESS_LABELS: Record<ProgressStatus, string> = {
   implemented: "已實作",
 };
 
-/* 單色為主，只有狀態用少量顏色：未學習灰、學習中黃、已理解藍、已實作黑 */
+/* 安靜的狀態標籤：未學習淡青、學習中淡黃、已理解淺藍、已實作青藍實底 */
 const STYLES: Record<ProgressStatus, string> = {
-  not_started: "bg-muted text-muted-foreground",
-  learning: "bg-gold/70 text-gold-foreground",
-  understood: "bg-sky/20 text-[#1f3f85]",
+  not_started: "bg-secondary text-muted-foreground",
+  learning: "bg-soft-yellow text-foreground",
+  understood: "bg-soft-blue text-foreground",
   implemented: "bg-primary text-primary-foreground",
 };
 
 export function ProgressBadge({ status, className }: { status: ProgressStatus | null | undefined; className?: string }) {
   const s = status ?? "not_started";
   return (
-    <Badge variant="outline" className={cn("h-auto border-transparent px-2 py-0.5 text-[11px] font-medium tracking-[0.08em]", STYLES[s], className)}>
+    <Badge variant="outline" className={cn("h-auto rounded-none border-transparent px-2 py-0.5 text-[11px] font-normal tracking-[0.12em]", STYLES[s], className)}>
       {PROGRESS_LABELS[s]}
     </Badge>
   );
@@ -40,5 +40,5 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 export function CategoryBadge({ category }: { category: string | null }) {
   if (!category) return null;
-  return <span className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{CATEGORY_LABELS[category] ?? category}</span>;
+  return <span className="text-[11px] tracking-[0.16em] text-primary">{CATEGORY_LABELS[category] ?? category}</span>;
 }

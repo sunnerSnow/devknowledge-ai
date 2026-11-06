@@ -18,7 +18,7 @@ export function CodeBlock({ code, language, title }: { code: string; language?: 
   }
 
   return (
-    <figure className="overflow-hidden bg-primary text-white dark:bg-black/40">
+    <figure className="overflow-hidden bg-code text-white">
       <figcaption className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-1.5 text-xs">
         <span className="truncate">
           {title ? <span className="font-medium">{title}</span> : null}

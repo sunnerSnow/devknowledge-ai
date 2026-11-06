@@ -90,9 +90,9 @@ export function JobForm({ mode, jobId, defaults }: { mode: "create" | "edit"; jo
         {opts.required ? <span className="ml-1 text-muted-foreground">*</span> : null}
       </FieldLabel>
       {opts.textarea ? (
-        <Textarea id={`job-${name}`} rows={opts.rows ?? 4} placeholder={opts.placeholder} aria-invalid={Boolean(errors[name])} className="bg-card leading-7" {...form.register(name)} />
+        <Textarea id={`job-${name}`} rows={opts.rows ?? 4} placeholder={opts.placeholder} aria-invalid={Boolean(errors[name])} className="panel leading-7" {...form.register(name)} />
       ) : (
-        <Input id={`job-${name}`} placeholder={opts.placeholder} aria-invalid={Boolean(errors[name])} className="bg-card" {...form.register(name)} />
+        <Input id={`job-${name}`} placeholder={opts.placeholder} aria-invalid={Boolean(errors[name])} className="panel" {...form.register(name)} />
       )}
       {errors[name] ? <FieldError>{errors[name]?.message}</FieldError> : opts.hint ? <FieldDescription>{opts.hint}</FieldDescription> : null}
     </Field>
@@ -123,7 +123,7 @@ export function JobForm({ mode, jobId, defaults }: { mode: "create" | "edit"; jo
       </div>
       {field("notes", "備註", { textarea: true, rows: 2, placeholder: "選填：你對這份職缺的想法、投遞狀態…" })}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-dotted border-foreground/30 pt-6">
+      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
         {mode === "create" ? (
           <CtaButton type="submit" size="lg" disabled={busy !== null} icon={busy ? <Loader2 className="size-4 animate-spin" /> : undefined}>
             {busy ? "AI 分析中，約 10–40 秒…" : "儲存並用 AI 分析"}

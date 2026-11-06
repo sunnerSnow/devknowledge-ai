@@ -32,7 +32,7 @@ export default async function PlansPage() {
           <PlanList plans={active} />
           {archived.length ? (
             <section className="grid gap-4">
-              <p className="section-label">已封存</p>
+              <p className="section-sub">已封存</p>
               <PlanList plans={archived} muted />
             </section>
           ) : null}
@@ -51,16 +51,16 @@ function PlanList({ plans, muted = false }: { plans: PlanSummary[]; muted?: bool
         const pct = p.totalTasks ? Math.round((p.completedTasks / p.totalTasks) * 100) : 0;
         return (
           <li key={p.id} className="flex">
-            <Link href={`/plans/${p.id}`} className={`group flex flex-1 flex-col bg-card p-6 transition-colors hover:bg-white ${muted ? "opacity-70" : ""}`}>
-              <div className="flex items-start justify-between gap-3 text-[11px] tracking-[0.12em] text-muted-foreground">
+            <Link href={`/plans/${p.id}`} className={`group flex flex-1 flex-col panel p-6 transition-colors hover:bg-card/70 ${muted ? "opacity-70" : ""}`}>
+              <div className="flex items-start justify-between gap-3 text-xs tracking-[0.1em] text-muted-foreground">
                 <span className="truncate">{p.jobTitle ?? "沒有對應職缺"}</span>
                 <span className="shrink-0">{STATUS_LABELS[p.status]}</span>
               </div>
               <h3 className="mt-4 text-xl font-medium tracking-[0.03em] group-hover:dotted-underline">{p.title}</h3>
               {p.goal ? <p className="mt-3 line-clamp-2 text-[13px] leading-6 text-muted-foreground">{p.goal}</p> : null}
               <div className="mt-auto pt-5">
-                <div className="h-1 w-full bg-foreground/10">
-                  <div className="h-1 bg-foreground" style={{ width: `${pct}%` }} />
+                <div className="h-2 w-full overflow-hidden bg-muted">
+                  <div className="h-2 bg-primary" style={{ width: `${pct}%` }} />
                 </div>
                 <p className="mt-2 text-xs tracking-[0.06em] text-muted-foreground">
                   {p.weekCount} 週・{p.totalTasks} 項任務・完成 {p.completedTasks}
