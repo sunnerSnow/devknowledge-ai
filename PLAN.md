@@ -2,7 +2,8 @@
 
 > **進度（2026-11-05）**：Phase 0 ＋ Phase 1 已完成，程式在 `web/`（接續前先讀 `web/README.md`）。
 > 25 項 Vitest 測試、typecheck、lint、`next build` 通過；本機示範模式以 Chrome 走過登入→搜尋→AI 建立→標記進度→stub→別名搜尋→手機版。
-> 2026-11-05 稍後：Gemini 以真實金鑰實測通過（預設 gemini-3.6-flash、備用 flash-lite）；資料庫決定改用 **Neon**（Supabase 免費版只允許 2 個 active 專案），登入改 **Better Auth**（Email＋密碼，使用者表在 auth schema，RLS 不變），Supabase 相依已移除；`npm run db:migrate` 可對 Neon 跑 migration。待使用者提供 Neon 連線字串後實測，再部署 Vercel。下一步：Phase 2 職缺分析。
+> 2026-11-05 稍後：Gemini 以真實金鑰實測通過（預設 gemini-3.6-flash、備用 flash-lite）；資料庫決定改用 **Neon**（Supabase 免費版只允許 2 個 active 專案），登入改 **Better Auth**（Email＋密碼，使用者表在 auth schema，RLS 不變），Supabase 相依已移除；`npm run db:migrate` 可對 Neon 跑 migration。Neon 已接上並實測。
+> **2026-11-06 已部署**：https://devknowledge-ai.vercel.app（Vercel 專案 devknowledge-ai，Root Directory `web`，函式 sin1；GitHub 整合，push main 自動部署）。Vercel 環境變數：DATABASE_URL（pooled）、BETTER_AUTH_SECRET、BETTER_AUTH_URL、AI_PROVIDER=gemini、GEMINI_API_KEY。正式站走過註冊／登入／登出／生成（Redis，17 秒）。踩坑：Vercel 的值不能帶引號；BETTER_AUTH_URL 與 BETTER_AUTH_SECRET 是兩個變數，漏了 secret 會 500。下一步：Phase 2 職缺分析。
 
 > 依據：`DevKnowledge_AI_MVP_Spec.md`（MVP 1.0）第 15 節的要求，先回報現況、第一階段範圍與環境變數，確認後再開發。
 > 日期：2026-11-05
@@ -169,6 +170,15 @@ Phase 2 起新增 `job_postings`、`job_skills(+user_id)`、`user_skills`；Phas
 Supabase 專案可以晚點再建（Phase 1 完成、本機驗證後）；migration 依慣例由你在 SQL Editor 手動跑，我會給檔案路徑與順序。
 
 ---
+
+## 5a. 視覺方向（2026-11-06 定案，參考 https://ztdn.net/）
+
+- 暖灰底 `#E9E9E4` ＋ SVG 細顆粒紋理（`body::before`，在內容之下，白卡片不受影響）；近乎單色：黑字、白卡片、灰說明。
+- 直角（`--radius: 0`）；主要 CTA 是黑底、右側虛線分隔＋箭頭（`components/ui/cta-button.tsx`）；一般按鈕黑底或 outline。
+- 字體 Noto Sans TC（瀏覽器端 Google Fonts；next/font 會在 build 時下載，開發機連不到就失敗），標題 500、字距 0.02–0.04em。
+- 標題結構：小字中文標籤（`.section-label`）＋大字英文標題（`.section-title`）；導覽英文為主、中文小字在下，目前頁用虛線底線。
+- 色彩只用在：進度標籤（未學習灰、學習中黃、已理解藍、已實作黑）與登入頁／Dashboard 的玻璃感漸層色塊（`.blob`，`mix-blend-mode: multiply`、尊重 reduced-motion）。
+- 規格 11 節原本的藍綠金配色已不再使用。
 
 ## 6. 後續 Phase 概要（確認後再細化）
 

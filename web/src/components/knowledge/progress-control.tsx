@@ -33,7 +33,7 @@ export function ProgressControl({ nodeId, slug, status }: { nodeId: string; slug
 
   return (
     <div className="grid gap-2">
-      <div role="radiogroup" aria-label="學習狀態" className="inline-flex flex-wrap gap-1 rounded-lg border bg-card p-1">
+      <div role="radiogroup" aria-label="學習狀態" className="inline-flex flex-wrap gap-px bg-foreground/20">
         {PROGRESS_STATUSES.map((s) => {
           const active = s === current;
           return (
@@ -45,8 +45,8 @@ export function ProgressControl({ nodeId, slug, status }: { nodeId: string; slug
               disabled={pending}
               onClick={() => choose(s)}
               className={cn(
-                "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm transition-colors disabled:opacity-60",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "inline-flex items-center gap-1 px-3 py-2 text-[13px] tracking-[0.06em] transition-colors disabled:opacity-60",
+                active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
               )}
             >
               {active ? <Check className="size-3.5" aria-hidden="true" /> : null}

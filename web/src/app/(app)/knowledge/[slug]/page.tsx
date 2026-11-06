@@ -7,7 +7,6 @@ import { CategoryBadge, ProgressBadge } from "@/components/knowledge/progress-ba
 import { ProgressControl } from "@/components/knowledge/progress-control";
 import { RelationsPanel } from "@/components/knowledge/relations-panel";
 import { ViewTracker } from "@/components/knowledge/view-tracker";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
@@ -37,48 +36,41 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
 
   const updated = new Date(detail.contentMeta?.createdAt ?? detail.updatedAt).toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric" });
   const sections = detail.content ? articleSections(detail.content) : [];
+  const providerLabel = detail.contentMeta ? (detail.contentMeta.provider === "mock" ? "mock provider 固定範例" : `${detail.contentMeta.provider} ${detail.contentMeta.modelName ?? ""}`.trim()) : null;
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-12">
       <ViewTracker nodeId={detail.id} />
-      <header className="grid gap-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <header className="grid gap-6">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] tracking-[0.12em] text-muted-foreground">
           <CategoryBadge category={detail.category} />
-          <ProgressBadge status={detail.progress?.status} />
           <span>更新於 {updated}</span>
-          {detail.contentMeta ? (
-            <span>
-              v{detail.contentMeta.version}・{detail.contentMeta.provider}
-              {detail.contentMeta.modelName ? ` ${detail.contentMeta.modelName}` : ""}
-            </span>
-          ) : null}
+          {detail.contentMeta ? <span>v{detail.contentMeta.version}</span> : null}
+          {providerLabel ? <span>{providerLabel}</span> : null}
         </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl dark:text-foreground">{detail.name}</h1>
-            {detail.englishName && detail.englishName !== detail.name ? <p className="mt-1 text-base text-muted-foreground">{detail.englishName}</p> : null}
-            {detail.aliases.length ? <p className="mt-1 text-xs text-muted-foreground">別名：{detail.aliases.join("、")}</p> : null}
+            {detail.englishName && detail.englishName !== detail.name ? <p className="section-label">{detail.englishName}</p> : null}
+            <h1 className="mt-2 text-[clamp(36px,5vw,64px)] leading-none font-medium tracking-[0.03em]">{detail.name}</h1>
+            {detail.aliases.length ? <p className="mt-4 text-xs tracking-[0.08em] text-muted-foreground">別名：{detail.aliases.join("、")}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {detail.content ? <ProgressControl nodeId={detail.id} slug={detail.slug} status={detail.progress?.status ?? "not_started"} /> : null}
+            {detail.content ? <ProgressControl nodeId={detail.id} slug={detail.slug} status={detail.progress?.status ?? "not_started"} /> : <ProgressBadge status={detail.progress?.status} />}
             {detail.content && !detail.generating ? <GenerateButton topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" /> : null}
           </div>
         </div>
         {detail.generating ? <GeneratingWatcher slug={detail.slug} /> : null}
-        {detail.content ? (
-          <Alert>
-            <AlertDescription>此頁內容由 AI 產生（{detail.contentMeta?.provider === "mock" ? "mock provider 固定範例" : `${detail.contentMeta?.provider} ${detail.contentMeta?.modelName ?? ""}`}），版本、API 與價格等易變資訊請依官方文件確認。</AlertDescription>
-          </Alert>
-        ) : null}
+        {detail.content ? <p className="border-l-2 border-foreground pl-3 text-xs leading-6 text-muted-foreground">此頁內容由 AI 產生（{providerLabel}），版本、API 與價格等易變資訊請依官方文件確認。</p> : null}
       </header>
 
       {detail.content ? (
-        <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)_260px]">
+        <div className="grid gap-12 lg:grid-cols-[170px_minmax(0,1fr)_250px]">
           <nav aria-label="章節" className="hidden lg:block">
-            <ol className="sticky top-24 grid gap-1 text-sm">
-              {sections.map((s) => (
-                <li key={s.id}>
-                  <a href={`#${s.id}`} className="block rounded-md px-2 py-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <ol className="sticky top-24 grid gap-2 text-[13px] tracking-[0.04em]">
+              {sections.map((s, i) => (
+                <li key={s.id} className="flex gap-3">
+                  <span className="w-5 shrink-0 tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                  <a href={`#${s.id}`} className="text-foreground/70 hover:dotted-underline hover:text-foreground">
                     {s.title}
                   </a>
                 </li>
@@ -89,7 +81,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
             <KnowledgeArticle content={detail.content} />
           </div>
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <h2 className="mb-3 text-sm font-semibold text-muted-foreground">知識關聯</h2>
+            <p className="section-label mb-4">知識關聯</p>
             <RelationsPanel detail={detail} />
           </aside>
         </div>
@@ -111,7 +103,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
 
       {!detail.content && (detail.relations.length || detail.neededBy.length) ? (
         <section className="max-w-md">
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">知識關聯</h2>
+          <p className="section-label mb-4">知識關聯</p>
           <RelationsPanel detail={detail} />
         </section>
       ) : null}

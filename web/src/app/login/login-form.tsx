@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { type ActionState, loginAction } from "@/app/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { CtaButton } from "@/components/ui/cta-button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,11 +28,11 @@ export function LoginForm() {
   return (
     <form className="mt-6 grid gap-4" onSubmit={onSubmit} noValidate>
       <Tabs value={intent} onValueChange={(v) => setIntent(v === "signup" ? "signup" : "signin")}>
-        <TabsList className="w-full">
-          <TabsTrigger value="signin" className="flex-1">
+        <TabsList variant="line" className="w-full gap-6 border-b border-dotted border-foreground/30 p-0">
+          <TabsTrigger value="signin" className="rounded-none px-0 pb-2 tracking-[0.08em] data-[state=active]:dotted-underline data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             登入
           </TabsTrigger>
-          <TabsTrigger value="signup" className="flex-1">
+          <TabsTrigger value="signup" className="rounded-none px-0 pb-2 tracking-[0.08em] data-[state=active]:dotted-underline data-[state=active]:bg-transparent data-[state=active]:shadow-none">
             註冊
           </TabsTrigger>
         </TabsList>
@@ -65,9 +65,9 @@ export function LoginForm() {
         />
         {errors.password ? <FieldError>{errors.password.message}</FieldError> : <FieldDescription>至少 8 個字元</FieldDescription>}
       </Field>
-      <Button className="mt-2 w-full" size="lg" type="submit" disabled={pending}>
+      <CtaButton className="mt-2 w-full justify-between" size="lg" type="submit" disabled={pending}>
         {pending ? "處理中…" : intent === "signup" ? "建立帳號" : "登入"}
-      </Button>
+      </CtaButton>
     </form>
   );
 }

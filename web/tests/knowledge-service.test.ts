@@ -205,6 +205,15 @@ describe("生成知識頁（Flow A）", () => {
     expect(usage[0]).toEqual({ status: "succeeded", input_tokens: 10 });
   });
 
+  it("全站每日上限：別人的用量也會算進去；既有頁面不受影響", async () => {
+    await generateKnowledge(db, alice, { topic: "RAG" }, { provider: mock, hourlyLimit: 20, dailyLimit: 1 });
+    const error = await expectAppError(generateKnowledge(db, bob, { topic: "Docker" }, { provider: mock, hourlyLimit: 20, dailyLimit: 1 }), 429, "rate_limited");
+    expect(error.message).toContain("全站");
+    expect((await generateKnowledge(db, bob, { topic: "RAG" }, { provider: mock, hourlyLimit: 20, dailyLimit: 1 })).existing).toBe(true);
+    // 0 表示不限
+    expect((await generateKnowledge(db, bob, { topic: "Docker" }, { provider: mock, hourlyLimit: 20, dailyLimit: 0 })).node.status).toBe("published");
+  });
+
   it("每小時使用量上限", async () => {
     await generateKnowledge(db, alice, { topic: "RAG" }, { provider: mock, hourlyLimit: 1 });
     await expectAppError(generateKnowledge(db, alice, { topic: "Docker" }, { provider: mock, hourlyLimit: 1 }), 429, "rate_limited");

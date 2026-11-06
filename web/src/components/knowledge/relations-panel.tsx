@@ -16,21 +16,21 @@ export function RelationsPanel({ detail }: { detail: KnowledgeDetail }) {
   const hasAny = detail.relations.length > 0 || detail.neededBy.length > 0;
 
   if (!hasAny) {
-    return <p className="text-sm text-muted-foreground">生成內容後，這裡會列出前置知識與相關技術。</p>;
+    return <p className="text-sm leading-7 text-muted-foreground">生成內容後，這裡會列出前置知識與相關技術。</p>;
   }
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-7">
       {GROUPS.map((g) => {
         const items = byType.get(g.type);
         if (!items?.length) return null;
         return (
           <section key={g.type} aria-labelledby={`rel-${g.type}`}>
-            <h3 id={`rel-${g.type}`} className="text-sm font-semibold text-primary dark:text-foreground">
+            <h3 id={`rel-${g.type}`} className="text-sm font-medium tracking-[0.06em]">
               {g.title}
             </h3>
-            <p className="text-xs text-muted-foreground">{g.hint}</p>
-            <ul className="mt-2 grid gap-1.5">
+            <p className="text-[11px] tracking-[0.04em] text-muted-foreground">{g.hint}</p>
+            <ul className="mt-3 grid gap-px bg-foreground/10">
               {items.map((r) => (
                 <li key={r.node.id}>
                   <RelationLink node={r.node} reason={r.reason} />
@@ -42,11 +42,11 @@ export function RelationsPanel({ detail }: { detail: KnowledgeDetail }) {
       })}
       {detail.neededBy.length ? (
         <section aria-labelledby="rel-needed-by">
-          <h3 id="rel-needed-by" className="text-sm font-semibold text-primary dark:text-foreground">
+          <h3 id="rel-needed-by" className="text-sm font-medium tracking-[0.06em]">
             誰需要它
           </h3>
-          <p className="text-xs text-muted-foreground">這些知識頁把本頁列為前置知識</p>
-          <ul className="mt-2 grid gap-1.5">
+          <p className="text-[11px] tracking-[0.04em] text-muted-foreground">這些知識頁把本頁列為前置知識</p>
+          <ul className="mt-3 grid gap-px bg-foreground/10">
             {detail.neededBy.map((n) => (
               <li key={n.id}>
                 <RelationLink node={n} reason={null} />
@@ -62,16 +62,12 @@ export function RelationsPanel({ detail }: { detail: KnowledgeDetail }) {
 function RelationLink({ node, reason }: { node: KnowledgeRelationItem["node"]; reason: string | null }) {
   const stub = node.status === "stub";
   return (
-    <Link
-      href={`/knowledge/${encodeURIComponent(node.slug)}`}
-      className="group block rounded-lg border bg-card px-3 py-2 transition-colors hover:border-teal/60 hover:bg-secondary/40"
-      title={reason ?? undefined}
-    >
+    <Link href={`/knowledge/${encodeURIComponent(node.slug)}`} className="group block bg-card px-4 py-3 transition-colors hover:bg-white" title={reason ?? undefined}>
       <span className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium text-foreground group-hover:text-primary">{node.name}</span>
-        {stub ? <span className="shrink-0 text-[11px] text-muted-foreground">待建立</span> : <ProgressBadge status={node.progress?.status} className="shrink-0 text-[11px]" />}
+        <span className="truncate text-sm font-medium tracking-[0.02em] group-hover:dotted-underline">{node.name}</span>
+        {stub ? <span className="shrink-0 text-[10px] tracking-[0.12em] text-muted-foreground">待建立</span> : <ProgressBadge status={node.progress?.status} className="shrink-0" />}
       </span>
-      {reason ? <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">{reason}</span> : null}
+      {reason ? <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">{reason}</span> : null}
     </Link>
   );
 }

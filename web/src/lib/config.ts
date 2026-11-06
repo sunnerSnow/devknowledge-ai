@@ -36,7 +36,10 @@ export interface AiEnv {
   /** 主要模型過載時改用；空字串表示不換 */
   fallbackModel: string | null;
   thinking: GeminiThinking;
+  /** 每位使用者每小時 */
   hourlyLimit: number;
+  /** 全站每 24 小時（免費方案的保險；0 表示不限制） */
+  dailyLimit: number;
 }
 
 /** AI 設定：預設 mock；選 gemini 卻沒給金鑰會直接報錯，不會默默改用 mock */
@@ -55,6 +58,7 @@ export function aiEnv(): AiEnv {
   }
   const fallbackRaw = process.env.GEMINI_FALLBACK_MODEL;
   const hourlyLimit = Number(process.env.AI_HOURLY_LIMIT ?? 20);
+  const dailyLimit = Number(process.env.AI_DAILY_LIMIT ?? 200);
   return {
     provider,
     apiKey,
@@ -63,5 +67,6 @@ export function aiEnv(): AiEnv {
     fallbackModel: fallbackRaw === undefined ? "gemini-3.5-flash-lite" : fallbackRaw.trim() || null,
     thinking: isGeminiThinking(thinking) ? thinking : "low",
     hourlyLimit: Number.isFinite(hourlyLimit) && hourlyLimit > 0 ? Math.floor(hourlyLimit) : 20,
+    dailyLimit: Number.isFinite(dailyLimit) && dailyLimit >= 0 ? Math.floor(dailyLimit) : 200,
   };
 }

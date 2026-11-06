@@ -34,7 +34,7 @@ npm run dev          # http://localhost:3000
 3. 重新啟動。金鑰只在伺服器端使用，不會進 client bundle。
 4. 注意：免費方案送出的內容會被 Google 用來改善產品，不要在技術名詞或職缺內容放個人聯絡資料。
 
-每位使用者每小時最多呼叫 AI `AI_HOURLY_LIMIT`（預設 20）次，含失敗的呼叫。免費方案常遇到 503「model high demand」：provider 會退避重試一次，再不行就換備用模型；整個生成（含格式錯誤重試）總預算 110 秒。
+每位使用者每小時最多呼叫 AI `AI_HOURLY_LIMIT`（預設 20）次，全站每 24 小時最多 `AI_DAILY_LIMIT`（預設 200，0 表示不限）次，都含失敗的呼叫。已生成的知識頁存在資料庫，再次搜尋不會重新呼叫 AI；只有按「重新生成」才會。免費方案常遇到 503「model high demand」：provider 會退避重試一次，再不行就換備用模型；整個生成（含格式錯誤重試）總預算 110 秒。
 
 想確認金鑰與模型真的能用：`GEMINI_LIVE=1 npx vitest run tests/gemini-live.test.ts`（會用額度；平常 `npm test` 會略過這支）。
 
@@ -93,6 +93,10 @@ src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度�
 src/proxy.ts              未登入導向 /login（只是樂觀檢查）
 tests/                    Vitest
 ```
+
+### 視覺
+
+參考 ztdn.net：暖灰底＋細顆粒紋理、近乎單色、直角、字距略寬、留白大；主要 CTA 是黑底＋虛線分隔＋箭頭（`CtaButton`），區塊標題是「中文小標＋英文大標」（`PageHeader`／`SectionHeader`），顏色只用在進度標籤與登入頁／Dashboard 的漸層色塊。token 都在 `src/app/globals.css`。
 
 ### 重要設計
 

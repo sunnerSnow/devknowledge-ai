@@ -39,11 +39,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* 品牌色（規格 11 節）：金色強調、藍綠輔助 */
+  /* 強調色：只用在狀態標籤與裝飾色塊，不用在大面積 */
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-teal: var(--teal);
   --color-teal-foreground: var(--teal-foreground);
+  --color-sky: var(--sky);
+  --color-sky-foreground: var(--sky-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -54,81 +56,91 @@
 }
 
 /*
- * 規格第 11 節配色：
- * Background #F7F7F2、Surface #FFFFFF、Primary #142B45、Accent #E9B949、Secondary #2C8C83、Text #1F2937、Muted #64748B
+ * 視覺語言（參考 ztdn.net）：
+ * 暖灰底＋細顆粒紋理、近乎單色（黑字、白卡片、灰說明）、直角、字距略寬、留白大；
+ * 色彩只出現在少數玻璃感漸層色塊與狀態標籤。
  */
 :root {
   --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-  --background: #f7f7f2;
-  --foreground: #1f2937;
+  --background: #e9e9e4;
+  --foreground: #111111;
   --card: #ffffff;
-  --card-foreground: #1f2937;
+  --card-foreground: #111111;
   --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #142b45;
+  --popover-foreground: #111111;
+  --primary: #111111;
   --primary-foreground: #ffffff;
-  --secondary: #e4f1ef;
-  --secondary-foreground: #1b5f58;
-  --muted: #eeeee6;
-  --muted-foreground: #64748b;
-  --accent: #fbf1d4;
-  --accent-foreground: #6b4e05;
+  --secondary: #f4f4f0;
+  --secondary-foreground: #111111;
+  --muted: #dcdcd6;
+  --muted-foreground: #7c7c7c;
+  --accent: #f4f4f0;
+  --accent-foreground: #111111;
   --destructive: #b42318;
-  --border: #e2e2d8;
-  --input: #d9d9cf;
-  --ring: #2c8c83;
-  --gold: #e9b949;
-  --gold-foreground: #142b45;
+  --border: #d3d3cc;
+  --input: #c6c6bf;
+  --ring: #111111;
+  --gold: #e8c64a;
+  --gold-foreground: #3d3000;
   --teal: #2c8c83;
   --teal-foreground: #ffffff;
-  --chart-1: #142b45;
-  --chart-2: #2c8c83;
-  --chart-3: #e9b949;
-  --chart-4: #64748b;
-  --chart-5: #b42318;
-  --radius: 0.625rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1f2937;
-  --sidebar-primary: #142b45;
+  --sky: #4f7be0;
+  --sky-foreground: #ffffff;
+  /* 裝飾色塊 */
+  --blob-blue: #4f7be0;
+  --blob-green: #86d28f;
+  --blob-pink: #c9357e;
+  --blob-yellow: #e8c64a;
+  --chart-1: #111111;
+  --chart-2: #4f7be0;
+  --chart-3: #e8c64a;
+  --chart-4: #7c7c7c;
+  --chart-5: #c9357e;
+  --radius: 0rem;
+  --sidebar: transparent;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #111111;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eeeee6;
-  --sidebar-accent-foreground: #142b45;
-  --sidebar-border: #e2e2d8;
-  --sidebar-ring: #2c8c83;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: #d3d3cc;
+  --sidebar-ring: #111111;
 }
 
 .dark {
-  --background: #10151c;
-  --foreground: #e6e8ec;
-  --card: #171e27;
-  --card-foreground: #e6e8ec;
-  --popover: #171e27;
-  --popover-foreground: #e6e8ec;
-  --primary: #e9b949;
-  --primary-foreground: #142b45;
-  --secondary: #1b3a38;
-  --secondary-foreground: #9fdcd3;
-  --muted: #1f2731;
-  --muted-foreground: #9aa4b2;
-  --accent: #3a2f10;
-  --accent-foreground: #f3d98a;
+  --background: #141414;
+  --foreground: #ececea;
+  --card: #1d1d1d;
+  --card-foreground: #ececea;
+  --popover: #1d1d1d;
+  --popover-foreground: #ececea;
+  --primary: #ececea;
+  --primary-foreground: #111111;
+  --secondary: #262626;
+  --secondary-foreground: #ececea;
+  --muted: #2a2a2a;
+  --muted-foreground: #9a9a9a;
+  --accent: #262626;
+  --accent-foreground: #ececea;
   --destructive: #f87171;
-  --border: #2a3340;
-  --input: #2a3340;
-  --ring: #2c8c83;
-  --gold: #e9b949;
-  --gold-foreground: #142b45;
+  --border: #333333;
+  --input: #3a3a3a;
+  --ring: #ececea;
+  --gold: #e8c64a;
+  --gold-foreground: #3d3000;
   --teal: #3aa89d;
   --teal-foreground: #0b1a18;
-  --sidebar: #171e27;
-  --sidebar-foreground: #e6e8ec;
-  --sidebar-primary: #e9b949;
-  --sidebar-primary-foreground: #142b45;
-  --sidebar-accent: #1f2731;
-  --sidebar-accent-foreground: #e6e8ec;
-  --sidebar-border: #2a3340;
-  --sidebar-ring: #2c8c83;
+  --sky: #6b93ea;
+  --sky-foreground: #0b1430;
+  --sidebar: transparent;
+  --sidebar-foreground: #ececea;
+  --sidebar-primary: #ececea;
+  --sidebar-primary-foreground: #111111;
+  --sidebar-accent: #1d1d1d;
+  --sidebar-accent-foreground: #ececea;
+  --sidebar-border: #333333;
+  --sidebar-ring: #ececea;
 }
 
 @layer base {
@@ -137,10 +149,29 @@
   }
   html {
     @apply font-sans;
+    letter-spacing: 0.02em;
   }
   body {
     @apply bg-background text-foreground;
     text-rendering: optimizeLegibility;
+    position: relative;
+  }
+  /* 細顆粒紋理：放在內容之下，白色卡片不受影響 */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.55;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 500;
+    letter-spacing: 0.03em;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -148,19 +179,77 @@
   }
 }
 
+/* 區塊標題：小字中文標籤＋大字英文標題 */
+.section-label {
+  @apply text-xs font-medium tracking-[0.18em] text-foreground/80;
+}
+.section-title {
+  @apply text-4xl leading-none font-medium tracking-[0.02em] sm:text-5xl;
+}
+
+/* 裝飾色塊：玻璃感漸層，放在相對定位的容器裡 */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(28px) saturate(1.1);
+  opacity: 0.75;
+  mix-blend-mode: multiply;
+}
+.blob-blue {
+  background: radial-gradient(circle at 30% 30%, var(--blob-blue) 0%, color-mix(in oklab, var(--blob-blue), transparent 65%) 55%, transparent 72%);
+}
+.blob-green {
+  background: radial-gradient(circle at 35% 35%, var(--blob-green) 0%, color-mix(in oklab, var(--blob-green), transparent 60%) 55%, transparent 72%);
+}
+.blob-pink {
+  background: radial-gradient(circle at 40% 30%, var(--blob-pink) 0%, color-mix(in oklab, var(--blob-pink), transparent 65%) 55%, transparent 72%);
+}
+.blob-yellow {
+  background: radial-gradient(circle at 40% 40%, var(--blob-yellow) 0%, color-mix(in oklab, var(--blob-yellow), transparent 60%) 55%, transparent 72%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .blob {
+    animation: blob-drift 18s ease-in-out infinite alternate;
+  }
+  .blob:nth-child(2) {
+    animation-duration: 24s;
+    animation-delay: -6s;
+  }
+  .blob:nth-child(3) {
+    animation-duration: 21s;
+    animation-delay: -12s;
+  }
+}
+@keyframes blob-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, -3%, 0) scale(1.06);
+  }
+}
+
+/* 虛線底線（導覽的目前頁、強調連結）；用 @utility 定義才能搭配 hover:、data-[...]: 等變體與 @apply */
+@utility dotted-underline {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.45em;
+  text-decoration-thickness: 1.5px;
+}
+
 /* 知識頁的 Markdown 內容 */
 .prose-dk {
-  @apply text-[15px] leading-7 text-foreground;
+  @apply text-[15px] leading-8 text-foreground;
 }
 .prose-dk > * + * {
-  margin-top: 0.9em;
+  margin-top: 1em;
 }
 .prose-dk h1,
 .prose-dk h2,
 .prose-dk h3,
 .prose-dk h4 {
-  @apply font-semibold text-primary dark:text-foreground;
-  margin-top: 1.4em;
+  @apply font-medium text-foreground;
+  margin-top: 1.5em;
 }
 .prose-dk h1 {
   @apply text-xl;
@@ -179,22 +268,22 @@
   @apply list-decimal pl-6;
 }
 .prose-dk li + li {
-  margin-top: 0.25em;
+  margin-top: 0.3em;
 }
 .prose-dk a {
-  @apply text-teal underline underline-offset-4;
+  @apply dotted-underline text-foreground;
 }
 .prose-dk strong {
-  @apply font-semibold text-primary dark:text-foreground;
+  @apply font-medium text-foreground;
 }
 .prose-dk code:not(pre code) {
-  @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
+  @apply bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
 }
 .prose-dk pre {
-  @apply overflow-x-auto rounded-lg bg-primary p-4 font-mono text-[13px] leading-6 text-white dark:bg-black/40;
+  @apply overflow-x-auto bg-primary p-4 font-mono text-[13px] leading-6 text-white;
 }
 .prose-dk blockquote {
-  @apply border-l-4 border-gold pl-4 text-muted-foreground;
+  @apply border-l-2 border-foreground pl-4 text-muted-foreground;
 }
 .prose-dk table {
   @apply w-full border-collapse text-sm;
@@ -204,7 +293,7 @@
   @apply border px-3 py-2 text-left align-top;
 }
 .prose-dk th {
-  @apply bg-muted font-semibold;
+  @apply bg-secondary font-medium;
 }
 .prose-dk hr {
   @apply my-6 border-border;

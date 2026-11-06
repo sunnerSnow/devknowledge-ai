@@ -57,6 +57,8 @@ export interface KnowledgeDetail extends KnowledgeNodeSummary {
 export interface GenerateDeps {
   provider: AiProvider;
   hourlyLimit: number;
+  /** 全站每 24 小時上限；省略或 0 表示不限 */
+  dailyLimit?: number;
 }
 
 const MAX_OUTPUT_TOKENS = 8192;
@@ -377,7 +379,7 @@ export async function generateKnowledge(db: Db, userId: string, input: unknown, 
 
     // 使用量：同一個使用者的請求先排隊（advisory lock），檢查與寫入在同一交易，並發送出也不能超過上限
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"ai_usage:" + userId}))`);
-    await assertUsageWithinLimit(tx, userId, deps.hourlyLimit);
+    await assertUsageWithinLimit(tx, userId, deps.hourlyLimit, deps.dailyLimit ?? 0);
 
     let claimed: { id: string; token: string | null } | undefined;
     if (existing) {

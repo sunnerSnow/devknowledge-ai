@@ -4,27 +4,29 @@ import { CategoryBadge, ProgressBadge } from "@/components/knowledge/progress-ba
 import type { KnowledgeNodeSummary } from "@/lib/services/knowledge";
 import { cn } from "@/lib/utils";
 
+/** 白色直角卡片：名稱置中偏大，底部一行小字（分類／狀態），參考 ztdn 的 Works 卡片 */
 export function KnowledgeCard({ node, className }: { node: KnowledgeNodeSummary; className?: string }) {
   const stub = node.status === "stub";
   return (
     <Link
       href={`/knowledge/${encodeURIComponent(node.slug)}`}
       className={cn(
-        "group flex flex-col gap-2 rounded-xl border bg-card p-4 transition-shadow hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-        stub && "border-dashed",
+        "group flex min-h-44 flex-col bg-card p-6 transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        stub && "bg-card/70",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate font-semibold text-primary group-hover:underline dark:text-foreground">{node.name}</h3>
-          {node.englishName && node.englishName !== node.name ? <p className="truncate text-xs text-muted-foreground">{node.englishName}</p> : null}
-        </div>
+        <CategoryBadge category={node.category} />
         <ProgressBadge status={node.progress?.status} className="shrink-0" />
       </div>
-      <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+      <div className="flex flex-1 flex-col justify-center py-5">
+        <h3 className="text-xl font-medium tracking-[0.04em] group-hover:dotted-underline">{node.name}</h3>
+        {node.englishName && node.englishName !== node.name ? <p className="mt-1 truncate text-xs tracking-[0.06em] text-muted-foreground">{node.englishName}</p> : null}
+      </div>
+      <p className="line-clamp-2 text-[13px] leading-6 text-muted-foreground">
         {node.generating ? (
-          <span className="inline-flex items-center gap-1.5 text-teal">
+          <span className="inline-flex items-center gap-1.5">
             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
             AI 生成中…
           </span>
@@ -34,10 +36,6 @@ export function KnowledgeCard({ node, className }: { node: KnowledgeNodeSummary;
           (node.summary ?? "")
         )}
       </p>
-      <div className="mt-auto flex items-center gap-2 pt-1">
-        <CategoryBadge category={node.category} />
-        {stub ? <span className="text-xs text-muted-foreground">待建立</span> : null}
-      </div>
     </Link>
   );
 }

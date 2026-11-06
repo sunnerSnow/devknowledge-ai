@@ -31,7 +31,7 @@ export function MermaidDiagram({ code, description }: { code: string; descriptio
   }, [code, id]);
 
   return (
-    <figure className="rounded-lg border bg-card p-4">
+    <figure className="bg-card p-5">
       {state === "error" ? <pre className="overflow-x-auto rounded bg-muted p-3 font-mono text-xs leading-5 text-muted-foreground">{code}</pre> : null}
       {state === "loading" ? <p className="text-sm text-muted-foreground">載入架構圖…</p> : null}
       {/* 這個容器只由 mermaid 寫入 innerHTML，不能放 React 子元素，否則 React 更新時會找不到節點 */}

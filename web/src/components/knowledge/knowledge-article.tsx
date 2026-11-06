@@ -26,23 +26,26 @@ export function articleSections(content: KnowledgeContent): ArticleSection[] {
 }
 
 export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
+  const sections = articleSections(content);
+  const num = (id: string) => String(sections.findIndex((s) => s.id === id) + 1).padStart(2, "0");
+
   return (
-    <article className="grid gap-10">
-      <Section id="summary" title="一句話理解">
-        <p className="text-lg leading-8 font-medium text-primary dark:text-foreground">{content.summary}</p>
+    <article className="grid gap-14">
+      <Section id="summary" num={num("summary")} title="一句話理解">
+        <p className="text-xl leading-9 font-medium tracking-[0.02em]">{content.summary}</p>
       </Section>
 
-      <Section id="why" title="為什麼需要它">
+      <Section id="why" num={num("why")} title="為什麼需要它">
         <Markdown content={content.why_it_matters} />
       </Section>
 
       {content.sections.map((s, i) => (
-        <Section key={i} id={`section-${i}`} title={s.title}>
+        <Section key={i} id={`section-${i}`} num={num(`section-${i}`)} title={s.title}>
           <Markdown content={s.content_md} />
           {s.key_points.length ? (
-            <ul className="mt-4 flex flex-wrap gap-2" aria-label="重點">
+            <ul className="mt-5 flex flex-wrap gap-2" aria-label="重點">
               {s.key_points.map((p, j) => (
-                <li key={j} className="rounded-full border border-teal/40 bg-secondary px-3 py-1 text-xs text-secondary-foreground">
+                <li key={j} className="border border-foreground/30 px-3 py-1 text-xs tracking-[0.06em]">
                   {p}
                 </li>
               ))}
@@ -52,17 +55,17 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ))}
 
       {content.architecture ? (
-        <Section id="architecture" title="架構圖">
+        <Section id="architecture" num={num("architecture")} title="架構圖">
           <MermaidDiagram code={content.architecture.mermaid} description={content.architecture.description} />
         </Section>
       ) : null}
 
       {content.code_examples.length ? (
-        <Section id="code" title="程式碼範例">
-          <div className="grid gap-5">
+        <Section id="code" num={num("code")} title="程式碼範例">
+          <div className="grid gap-6">
             {content.code_examples.map((ex, i) => (
               <div key={i} className="grid gap-2">
-                {ex.description ? <p className="text-sm leading-6 text-muted-foreground">{ex.description}</p> : null}
+                {ex.description ? <p className="text-sm leading-7 text-muted-foreground">{ex.description}</p> : null}
                 <CodeBlock code={ex.code} language={ex.language} title={ex.title} />
               </div>
             ))}
@@ -71,12 +74,12 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ) : null}
 
       {content.comparisons.length ? (
-        <Section id="comparisons" title="與相似技術比較">
-          <dl className="grid gap-3">
+        <Section id="comparisons" num={num("comparisons")} title="與相似技術比較">
+          <dl className="grid gap-px bg-foreground/10">
             {content.comparisons.map((c, i) => (
-              <div key={i} className="rounded-lg border bg-card p-4">
-                <dt className="font-semibold text-primary dark:text-foreground">vs. {c.name}</dt>
-                <dd className="mt-1 text-sm leading-6 text-foreground/90">{c.difference}</dd>
+              <div key={i} className="bg-card p-5">
+                <dt className="font-medium tracking-[0.04em]">vs. {c.name}</dt>
+                <dd className="mt-2 text-sm leading-7 text-foreground/85">{c.difference}</dd>
               </div>
             ))}
           </dl>
@@ -84,10 +87,10 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ) : null}
 
       {content.common_misconceptions.length ? (
-        <Section id="misconceptions" title="常見誤解">
-          <ul className="grid gap-2">
+        <Section id="misconceptions" num={num("misconceptions")} title="常見誤解">
+          <ul className="grid gap-3">
             {content.common_misconceptions.map((m, i) => (
-              <li key={i} className="flex gap-3 rounded-lg border-l-4 border-gold bg-accent/50 px-4 py-2.5 text-sm leading-6">
+              <li key={i} className="border-l-2 border-foreground pl-4 text-sm leading-7">
                 {m}
               </li>
             ))}
@@ -96,18 +99,18 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ) : null}
 
       {content.interview_topics.length ? (
-        <Section id="interview" title="面試重點">
-          <ol className="grid gap-4">
+        <Section id="interview" num={num("interview")} title="面試重點">
+          <ol className="grid gap-px bg-foreground/10">
             {content.interview_topics.map((t, i) => (
-              <li key={i} className="rounded-xl border bg-card p-4">
-                <p className="font-medium text-primary dark:text-foreground">
-                  <span className="mr-2 text-teal">Q{i + 1}</span>
+              <li key={i} className="bg-card p-5">
+                <p className="font-medium tracking-[0.02em]">
+                  <span className="mr-3 text-xs tracking-[0.12em] text-muted-foreground">Q{i + 1}</span>
                   {t.question}
                 </p>
-                <p className="mt-2 text-xs font-medium text-muted-foreground">評量重點</p>
-                <ul className="mt-1 flex flex-wrap gap-1.5">
+                <p className="mt-3 text-[11px] tracking-[0.12em] text-muted-foreground">評量重點</p>
+                <ul className="mt-2 flex flex-wrap gap-2">
                   {t.evaluation_points.map((p, j) => (
-                    <li key={j} className="rounded-md bg-muted px-2 py-0.5 text-xs">
+                    <li key={j} className="bg-secondary px-2 py-0.5 text-xs">
                       {p}
                     </li>
                   ))}
@@ -119,15 +122,15 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ) : null}
 
       {content.learning_tasks.length ? (
-        <Section id="tasks" title="實作任務">
-          <ul className="grid gap-3">
+        <Section id="tasks" num={num("tasks")} title="實作任務">
+          <ul className="grid gap-px bg-foreground/10">
             {content.learning_tasks.map((t, i) => (
-              <li key={i} className="flex items-start justify-between gap-4 rounded-xl border bg-card p-4">
+              <li key={i} className="flex items-start justify-between gap-4 bg-card p-5">
                 <div>
-                  <p className="font-medium text-primary dark:text-foreground">{t.title}</p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{t.description}</p>
+                  <p className="font-medium tracking-[0.02em]">{t.title}</p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{t.description}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">約 {t.estimated_minutes} 分鐘</span>
+                <span className="shrink-0 text-xs tracking-[0.08em] text-muted-foreground">約 {t.estimated_minutes} 分鐘</span>
               </li>
             ))}
           </ul>
@@ -136,11 +139,11 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
       ) : null}
 
       {content.caveats.length ? (
-        <Section id="caveats" title="注意事項">
-          <ul className="grid gap-1.5 text-sm leading-6 text-muted-foreground">
+        <Section id="caveats" num={num("caveats")} title="注意事項">
+          <ul className="grid gap-2 text-sm leading-7 text-muted-foreground">
             {content.caveats.map((c, i) => (
-              <li key={i} className="flex gap-2">
-                <span aria-hidden="true">•</span>
+              <li key={i} className="flex gap-3">
+                <span aria-hidden="true">—</span>
                 {c}
               </li>
             ))}
@@ -151,12 +154,15 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({ id, num, title, children }: { id: string; num: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
-      <h2 id={`${id}-title`} className="mb-3 text-lg font-semibold tracking-tight text-primary dark:text-foreground">
-        {title}
-      </h2>
+      <div className="mb-5 flex items-baseline gap-4 border-b border-dotted border-foreground/30 pb-3">
+        <span className="text-xs tracking-[0.12em] text-muted-foreground tabular-nums">{num}</span>
+        <h2 id={`${id}-title`} className="text-xl font-medium tracking-[0.04em]">
+          {title}
+        </h2>
+      </div>
       {children}
     </section>
   );

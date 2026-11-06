@@ -3,7 +3,7 @@ import { GenerateButton } from "@/components/knowledge/generate-button";
 import { KnowledgeCard } from "@/components/knowledge/knowledge-card";
 import { SearchForm } from "@/components/knowledge/search-form";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
@@ -35,8 +35,8 @@ export default async function KnowledgePage({ searchParams }: PageProps<"/knowle
   const canCreate = q && !error && !exact && slug.length > 0;
 
   return (
-    <div className="grid gap-8">
-      <PageHeader eyebrow="Knowledge" title="知識探索" description="搜尋支援繁體中文與英文別名。找不到時，可以用 AI 建立一份結構化知識頁。" />
+    <div className="grid gap-12">
+      <PageHeader eyebrow="知識探索" title="Knowledge" description="搜尋支援繁體中文與英文別名。找不到時，可以用 AI 建立一份結構化知識頁。" />
       <SearchForm defaultValue={q} autoFocus={!q} className="max-w-2xl" />
 
       {error ? (
@@ -46,18 +46,17 @@ export default async function KnowledgePage({ searchParams }: PageProps<"/knowle
       ) : null}
 
       {q && !error ? (
-        <section aria-live="polite" className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm text-muted-foreground">
-              「{q}」{results.length ? `找到 ${results.length} 個結果` : "沒有符合的知識頁"}
-            </h2>
-            {canCreate && results.length ? <GenerateButton topic={q} variant="outline" size="sm" /> : null}
-          </div>
+        <section aria-live="polite" className="grid gap-6">
+          <SectionHeader
+            eyebrow={results.length ? `「${q}」找到 ${results.length} 個結果` : `「${q}」沒有符合的知識頁`}
+            title="Results"
+            aside={canCreate && results.length ? <GenerateButton topic={q} variant="outline" size="sm" /> : null}
+          />
           {results.length ? (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {results.map((n) => (
-                <li key={n.id}>
-                  <KnowledgeCard node={n} className="h-full" />
+                <li key={n.id} className="flex">
+                  <KnowledgeCard node={n} className="flex-1" />
                 </li>
               ))}
             </ul>
@@ -72,13 +71,13 @@ export default async function KnowledgePage({ searchParams }: PageProps<"/knowle
       ) : null}
 
       {!q ? (
-        <section className="grid gap-4">
-          <h2 className="text-sm font-medium text-muted-foreground">{recent.length ? "最近瀏覽" : "還沒有瀏覽過任何知識頁"}</h2>
+        <section className="grid gap-6">
+          <SectionHeader eyebrow="最近瀏覽" title="Recent" />
           {recent.length ? (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {recent.map((n) => (
-                <li key={n.id}>
-                  <KnowledgeCard node={n} className="h-full" />
+                <li key={n.id} className="flex">
+                  <KnowledgeCard node={n} className="flex-1" />
                 </li>
               ))}
             </ul>

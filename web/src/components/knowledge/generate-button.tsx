@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CtaButton } from "@/components/ui/cta-button";
 
 interface ApiEnvelope<T> {
   data: T | null;
@@ -88,12 +89,20 @@ export function GenerateButton({
 
   const busy = phase.kind === "generating";
   const Icon = regenerate ? RefreshCw : Sparkles;
+  const text = busy ? "生成中…" : (label ?? (regenerate ? "重新生成" : `用 AI 建立「${topic}」知識頁`));
   return (
     <div className="grid gap-2">
-      <Button type="button" onClick={run} disabled={busy} variant={variant} size={size} aria-busy={busy}>
-        {busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Icon aria-hidden="true" />}
-        {busy ? "生成中…" : (label ?? (regenerate ? "重新生成" : `用 AI 建立「${topic}」知識頁`))}
-      </Button>
+      {variant === "default" ? (
+        <CtaButton type="button" onClick={run} disabled={busy} size={size === "lg" ? "lg" : "default"} aria-busy={busy} icon={busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : undefined}>
+          <Icon aria-hidden="true" />
+          {text}
+        </CtaButton>
+      ) : (
+        <Button type="button" onClick={run} disabled={busy} variant={variant} size={size} aria-busy={busy} className="tracking-[0.04em]">
+          {busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Icon aria-hidden="true" />}
+          {text}
+        </Button>
+      )}
       {phase.kind === "generating" ? (
         <p className="text-xs text-muted-foreground" role="status">
           {phase.hint}

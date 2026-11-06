@@ -28,7 +28,7 @@ export function GeneratingWatcher({ slug }: { slug: string }) {
   }, [slug, router]);
 
   return (
-    <p className="inline-flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground" role="status">
+    <p className="inline-flex items-center gap-2 border-l-2 border-foreground pl-3 text-sm" role="status">
       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
       AI 正在生成這一頁，通常需要 20–60 秒；完成後會自動更新。
     </p>
