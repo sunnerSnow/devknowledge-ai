@@ -15,9 +15,9 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", hint: "總覽" },
   { href: "/knowledge", label: "Knowledge", hint: "知識探索" },
-  { href: "/jobs", label: "Job Analyzer", hint: "職缺分析", soon: true },
+  { href: "/jobs", label: "Job Analyzer", hint: "職缺分析" },
   { href: "/practice", label: "Practice", hint: "面試練習", soon: true },
-  { href: "/skills", label: "My Skills", hint: "技能地圖", soon: true },
+  { href: "/skills", label: "My Skills", hint: "技能地圖" },
   { href: "/settings", label: "Settings", hint: "設定" },
 ];
 

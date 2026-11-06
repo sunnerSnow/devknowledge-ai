@@ -4,7 +4,7 @@ import { CategoryBadge, ProgressBadge } from "@/components/knowledge/progress-ba
 import type { KnowledgeNodeSummary } from "@/lib/services/knowledge";
 import { cn } from "@/lib/utils";
 
-/** 白色直角卡片：名稱置中偏大，底部一行小字（分類／狀態），參考 ztdn 的 Works 卡片 */
+/** 白色直角卡片：名稱置中偏大，底部一行小字（分類／狀態） */
 export function KnowledgeCard({ node, className }: { node: KnowledgeNodeSummary; className?: string }) {
   const stub = node.status === "stub";
   return (

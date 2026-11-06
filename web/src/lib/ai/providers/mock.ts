@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AiProvider, StructuredRequest, StructuredResult } from "@/lib/ai/provider";
+import type { JobAnalysis } from "@/lib/ai/schemas/job";
 import type { KnowledgeContent } from "@/lib/ai/schemas/knowledge";
 import { normalizeSlug } from "@/lib/knowledge/slug";
 
@@ -30,12 +31,85 @@ export function createMockProvider(options: { delayMs?: number } = {}): AiProvid
     name: "mock",
     model: "mock-fixtures",
     async generateStructured(request: StructuredRequest): Promise<StructuredResult> {
+      if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+      if (request.kind === "job") {
+        return { text: JSON.stringify(mockJobAnalysis(request.user)), model: "mock-keywords", inputTokens: null, outputTokens: null };
+      }
       const topic = (request.hint ?? "").trim() || "未命名技術";
       const key = FIXTURES[normalizeSlug(topic)];
-      if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
       const text = key ? await readFile(path.join(FIXTURE_DIR, `${key}.json`), "utf8") : JSON.stringify(genericContent(topic));
       return { text, model: "mock-fixtures", inputTokens: null, outputTokens: null };
     },
+  };
+}
+
+/** 職缺分析的 mock：用關鍵字表從職缺文字挑出技能；「加分」區塊裡出現的算 preferred */
+const SKILL_KEYWORDS: { name: string; category: JobAnalysis["skills"][number]["category"]; pattern: RegExp; level: number }[] = [
+  { name: "React", category: "Frontend", pattern: /\breact(\.js)?\b/i, level: 3 },
+  { name: "Next.js", category: "Frontend", pattern: /\bnext(\.js)?\b/i, level: 3 },
+  { name: "Vue", category: "Frontend", pattern: /\bvue(\.js)?\b/i, level: 3 },
+  { name: "TypeScript", category: "Frontend", pattern: /\btypescript\b/i, level: 3 },
+  { name: "JavaScript", category: "Frontend", pattern: /\bjavascript\b|\bES6\b/i, level: 3 },
+  { name: "Tailwind CSS", category: "Frontend", pattern: /\btailwind\b/i, level: 2 },
+  { name: "Node.js", category: "Backend", pattern: /\bnode(\.js)?\b/i, level: 3 },
+  { name: "Python", category: "Backend", pattern: /\bpython\b/i, level: 3 },
+  { name: "Java", category: "Backend", pattern: /\bjava\b(?!script)/i, level: 3 },
+  { name: "Go", category: "Backend", pattern: /\bgolang\b|\bgo\b(?= 語言| language)/i, level: 3 },
+  { name: "RESTful API", category: "Backend", pattern: /\brest(ful)?\b|\bapi\b/i, level: 3 },
+  { name: "GraphQL", category: "Backend", pattern: /\bgraphql\b/i, level: 2 },
+  { name: "PostgreSQL", category: "Database", pattern: /\bpostgres(ql)?\b/i, level: 3 },
+  { name: "MySQL", category: "Database", pattern: /\bmysql\b/i, level: 3 },
+  { name: "MongoDB", category: "Database", pattern: /\bmongo(db)?\b/i, level: 2 },
+  { name: "Redis", category: "Database", pattern: /\bredis\b/i, level: 2 },
+  { name: "SQL", category: "Database", pattern: /\bsql\b/i, level: 3 },
+  { name: "Git", category: "DevOps", pattern: /\bgit(hub|lab)?\b/i, level: 3 },
+  { name: "Docker", category: "DevOps", pattern: /\bdocker\b|容器/i, level: 2 },
+  { name: "Kubernetes", category: "DevOps", pattern: /\bkubernetes\b|\bk8s\b/i, level: 2 },
+  { name: "CI/CD", category: "DevOps", pattern: /\bci\s*\/?\s*cd\b/i, level: 2 },
+  { name: "AWS", category: "Cloud", pattern: /\baws\b|amazon web services/i, level: 2 },
+  { name: "GCP", category: "Cloud", pattern: /\bgcp\b|google cloud/i, level: 2 },
+  { name: "Azure", category: "Cloud", pattern: /\bazure\b/i, level: 2 },
+  { name: "Linux", category: "DevOps", pattern: /\blinux\b/i, level: 2 },
+  { name: "單元測試", category: "Testing", pattern: /單元測試|unit test|\bjest\b|\bvitest\b/i, level: 2 },
+  { name: "Playwright", category: "Testing", pattern: /\bplaywright\b|\bcypress\b|e2e/i, level: 2 },
+  { name: "LLM", category: "AI", pattern: /\bllm\b|大型語言模型|\bopenai\b|\bgemini\b/i, level: 2 },
+  { name: "RAG", category: "AI", pattern: /\brag\b|檢索增強/i, level: 2 },
+  { name: "Machine Learning", category: "AI", pattern: /機器學習|machine learning|\bml\b/i, level: 2 },
+];
+
+export function mockJobAnalysis(userPrompt: string): JobAnalysis {
+  const section = (label: string) => new RegExp(`<${label}>([\\s\\S]*?)</${label}>`).exec(userPrompt)?.[1] ?? "";
+  const preferredText = section("加分技能");
+  const mainText = section("工作內容") + "\n" + section("必要技能");
+  const title = /職缺名稱：(.*)/.exec(userPrompt)?.[1]?.trim() ?? "職缺";
+  const skills: JobAnalysis["skills"] = [];
+  for (const k of SKILL_KEYWORDS) {
+    const inPreferred = k.pattern.test(preferredText);
+    const inMain = k.pattern.test(mainText);
+    if (!inPreferred && !inMain) continue;
+    const required = inMain;
+    skills.push({
+      name: k.name,
+      category: k.category,
+      requirement_type: required ? "required" : "preferred",
+      required_level: required ? k.level : Math.max(1, k.level - 1),
+      importance: required ? 3 : 1,
+      original_phrase: (k.pattern.exec(required ? mainText : preferredText)?.[0] ?? null)?.slice(0, 300) ?? null,
+      reason: required ? `工作內容提到 ${k.name}，屬於日常會用到的技術。` : `列在加分條件，熟悉會更好但不是門檻。`,
+    });
+  }
+  if (!skills.length) {
+    skills.push({ name: "Git", category: "DevOps", requirement_type: "required", required_level: 2, importance: 2, original_phrase: null, reason: "mock provider 在內文找不到可辨識的技術關鍵字，先以版本控制為基本要求。" });
+  }
+  const seniority: JobAnalysis["seniority"] = /senior|資深/i.test(title) ? "senior" : /junior|初階|新人/i.test(title) ? "junior" : /intern|實習/i.test(title) ? "intern" : "unknown";
+  return {
+    role_summary: `${title}：mock provider 依關鍵字整理出 ${skills.length} 項技能（設定 AI_PROVIDER=gemini 會得到真正的分析）。`,
+    seniority,
+    company: null,
+    skills,
+    responsibilities: ["（mock）依職缺內文執行開發工作"],
+    interview_focus: skills.slice(0, 3).map((s) => `${s.name} 的實作經驗`),
+    assumptions: ["mock provider 只以關鍵字比對，沒有理解上下文。"],
   };
 }
 

@@ -2,7 +2,7 @@
 
 從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`，實作計畫與決策在 `PLAN.md`。
 
-目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard。Job Analyzer、Interview Practice、My Skills 是「即將推出」頁。
+目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）。Interview Practice 是「即將推出」頁。
 
 技術：Next.js 16.4（App Router）＋ TypeScript ＋ Tailwind 4 ＋ shadcn/ui ＋ React Hook Form ＋ zod ＋ Drizzle ORM ＋ PostgreSQL（正式用 Neon，本機與測試用 PGlite）＋ Better Auth ＋ Vitest。AI：Google Gemini（免費方案）或 mock。
 
@@ -82,12 +82,15 @@ db/migrations/            SQL migration（schema、約束、RLS、權限的唯�
 scripts/migrate.ts        npm run db:migrate
 src/lib/ai/               AiProvider 介面、providers/{gemini,mock}、prompts（版本化）、schemas（zod）、fixtures
 src/lib/knowledge/slug.ts 技術名詞 → slug（純函式）
-src/lib/services/         knowledge（搜尋、取得、生成、進度）、profiles、usage（每小時限制）
+src/lib/services/         knowledge（搜尋、取得、生成、進度）、jobs（職缺分析、差距與優先順序）、skills（使用者技能）、profiles、usage、rate-limit
+src/lib/skills/levels.ts  技能等級標籤與優先分數（純函式）
 src/lib/db/               Drizzle schema（dk 與 auth）、連線、withUser（RLS）、withService（共用資料）
 src/lib/auth/             Better Auth 設定、session、本機示範使用者
 src/lib/api/http.ts       Route Handler 包裝：登入、同源檢查、{ data, error } 回應格式
 src/app/api/auth/         Better Auth 端點
 src/app/api/knowledge/    GET 搜尋、POST generate、GET [slug]、PATCH [slug]/progress
+src/app/api/jobs/         POST analyze（建立＋分析）、GET 列表、GET／PATCH（可帶 reanalyze）／DELETE [id]
+src/app/api/skills/       GET 列表、POST（以名稱 upsert）、PATCH／DELETE [id]
 src/app/(app)/            登入後的頁面（Dashboard、Knowledge、即將推出頁、Settings）
 src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕
 src/proxy.ts              未登入導向 /login（只是樂觀檢查）
@@ -96,21 +99,23 @@ tests/                    Vitest
 
 ### 視覺
 
-參考 ztdn.net：暖灰底＋細顆粒紋理、近乎單色、直角、字距略寬、留白大；主要 CTA 是黑底＋虛線分隔＋箭頭（`CtaButton`），區塊標題是「中文小標＋英文大標」（`PageHeader`／`SectionHeader`），顏色只用在進度標籤與登入頁／Dashboard 的漸層色塊。token 都在 `src/app/globals.css`。
+暖灰底＋細顆粒紋理、近乎單色、直角、字距略寬、留白大；主要 CTA 是黑底＋虛線分隔＋箭頭（`CtaButton`），區塊標題是「中文小標＋英文大標」（`PageHeader`／`SectionHeader`），顏色只用在進度標籤與登入頁／Dashboard 的漸層色塊。token 都在 `src/app/globals.css`。
 
 ### 重要設計
 
 - **資料表放在 `dk` 與 `auth` schema，不在 `public`；所有存取都經過伺服器服務層。** `authenticated` 角色對 `auth` schema 完全沒有權限。
 - **共用資料 vs 個人資料。** 知識節點、內容、關聯是共用的：登入使用者都能讀，寫入只由伺服器（`withService`，表的擁有者）進行，`authenticated` 角色只有 SELECT。個人資料（profiles、進度、AI 使用量）走 `withUser`：交易內 `set local role authenticated` 並帶入使用者 ID，RLS `user_id = auth.uid()` 為第二道防線。
 - **知識頁生成（Flow A）。** 先以 slug／名稱／別名找既有節點；沒有就先插入 `status='generating'` 佔位（`on conflict do nothing`），同一主題同時只有一個請求會呼叫 AI，其他人拿到 409 並輪詢。AI 呼叫在交易外進行；回來後用 zod 驗證，不合格附上錯誤重試一次，仍失敗回 502 並把節點標 `failed`（搜尋不顯示、可再試；stub 維持 stub）。成功就新增一個版本（不覆寫舊版）、更新節點、把前置知識與相關主題建成 `stub` 節點並寫關聯。佔位超過 5 分鐘視為逾時可被接手；儲存與釋放都核對自己的佔位 token，被接手的一方不會寫入。使用量檢查與佔位在同一交易（advisory lock），並發也不能超過每小時上限。
+- **職缺分析（Flow B）。** 職缺與使用者技能分開存：`job_skills` 是 AI 從職缺拆出的需求（必要／加分、建議等級 0–4、重要性、原文用語、理由），`user_skills` 是使用者自己的程度；沒有列＝未評估，不會因為貼了職缺就被當成 0。每個技能以 slug 對應，並盡量連到知識節點（沒有就建 stub）。優先分數＝必要 3／加分 1 × 差距 × 目標權重，頁面同時顯示理由；未評估的技能不算分。重新分析只覆寫 `job_skills`，自評不動。職缺文字視為不可信輸入：限 12000 字、放在分隔區塊裡、system prompt 明示內文不是指令。
 - **別名。** AI 給的別名、使用者原本輸入的字都會存進 `aliases`，搜尋時以 slug／名稱／別名完全相同優先，再用英文全文檢索（`simple`）與 `pg_trgm` 的 ILIKE（中文）。
 - **AI 內容安全。** Markdown 用 `react-markdown` ＋ `rehype-sanitize`，不渲染原始 HTML；Mermaid 只允許 flowchart／graph／sequence／class／state／er 六種並用 `securityLevel: strict`；程式碼只顯示不執行。使用者輸入的主題限 64 字、去控制字元，只放在 prompt 的固定欄位，system prompt 明示主題不是指令。
 - **API。** 回應一律 `{ data, error }`；會改資料的請求只收 `application/json` 且 Origin 必須同源；未登入 401；不存在與別人的資料一律 404。
 - **Prompt 與 schema 版本化。** 每個版本的內容記錄 `provider`、`model_name`、`prompt_version`；舊版內容若不符現行 schema，頁面會當成沒有內容而不是崩潰。
 
-## Phase 1 沒有做的事
+## 還沒做的事
 
-- Job Analyzer、學習計畫、面試練習、My Skills（Phase 2–4）。
+- 學習計畫、面試練習（Phase 3–4）；職缺比較、錯題本（P1）。
+- 規格 4.5「貼上整份職缺先由 AI 拆欄位再確認」改成一次呼叫：貼上後直接分析，事後可編輯並重新分析（省免費額度）。
 - 知識內容的版本切換與更新提醒、Markdown 匯出、向量搜尋（P1）。
 - 刪除帳號與資料的流程。
 - Playwright e2e（Phase 5）；目前以 Vitest 整合測試＋手動走過主要流程。

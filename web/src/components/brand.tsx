@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** 品牌標誌：小字副標在上、字標在下（參考 ztdn 的「言葉と進め／ザツダン」結構） */
+/** 品牌標誌：小字副標在上、字標在下 */
 export function Brand({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>

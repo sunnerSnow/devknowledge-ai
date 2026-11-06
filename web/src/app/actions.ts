@@ -11,8 +11,10 @@ import { getSessionUser } from "@/lib/auth/session";
 import { isLocalMode } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
+import { deleteJob, updateJob } from "@/lib/services/jobs";
 import { markViewed, setProgress } from "@/lib/services/knowledge";
 import { updateProfile } from "@/lib/services/profiles";
+import { deleteUserSkill, upsertUserSkill } from "@/lib/services/skills";
 import { clientIp, consumeRateLimit } from "@/lib/services/rate-limit";
 import { type Credentials, credentialsSchema } from "@/lib/validation/auth";
 
@@ -135,6 +137,60 @@ export async function setProgressAction(nodeId: string, slug: string, status: st
   revalidatePath(`/knowledge/${slug}`);
   revalidatePath("/");
   return { done: true };
+}
+
+// ---------------------------------------------------------------------------
+// 職缺與技能（AI 分析走 API 路由，這裡只有不需要 AI 的操作）
+// ---------------------------------------------------------------------------
+
+/** 自評一個技能（job 頁與 My Skills 共用）；level null＝回到未評估 */
+export async function setSkillLevelAction(skillName: string, level: number | null, extra: { category?: string | null; goalWeight?: number } = {}): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await upsertUserSkill(await getDb(), user.id, { skillName, level, ...extra });
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath("/jobs", "layout");
+  revalidatePath("/skills");
+  revalidatePath("/");
+  return { done: true };
+}
+
+export async function deleteSkillAction(id: string): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await deleteUserSkill(await getDb(), user.id, id);
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath("/skills");
+  revalidatePath("/jobs", "layout");
+  return { done: true };
+}
+
+export async function updateJobAction(jobId: string, input: Record<string, unknown>): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await updateJob(await getDb(), user.id, jobId, input);
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/jobs");
+  return { done: true };
+}
+
+export async function deleteJobAction(jobId: string): Promise<void> {
+  const user = await sessionOrRedirect();
+  try {
+    await deleteJob(await getDb(), user.id, jobId);
+  } catch (error) {
+    if (!(error instanceof AppError)) logError(error);
+  }
+  revalidatePath("/jobs");
+  revalidatePath("/");
+  redirect("/jobs");
 }
 
 // ---------------------------------------------------------------------------

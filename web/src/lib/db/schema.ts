@@ -1,4 +1,4 @@
-import { integer, jsonb, numeric, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, numeric, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { authSchema } from "@/lib/db/auth-schema";
 
 /**
@@ -93,5 +93,74 @@ export const aiUsage = dk.table("ai_usage", {
   createdAt: createdAt(),
 });
 
-export const schema = { profiles, knowledgeNodes, knowledgeContents, knowledgeRelations, userKnowledgeProgress, aiUsage, ...authSchema };
+export const REQUIREMENT_TYPES = ["required", "preferred"] as const;
+export type RequirementType = (typeof REQUIREMENT_TYPES)[number];
+
+export const EVIDENCE_TYPES = ["self_assessment", "quiz", "project", "interview_practice"] as const;
+export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
+
+export const jobPostings = dk.table("job_postings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  title: text("title").notNull(),
+  company: text("company"),
+  sourceUrl: text("source_url"),
+  rawDescription: text("raw_description").notNull(),
+  requiredSkillsRaw: text("required_skills_raw"),
+  preferredSkillsRaw: text("preferred_skills_raw"),
+  notes: text("notes"),
+  analysis: jsonb("analysis"),
+  analysisProvider: text("analysis_provider"),
+  analysisModel: text("analysis_model"),
+  analysisPromptVersion: text("analysis_prompt_version"),
+  analyzedAt: timestamp("analyzed_at", { withTimezone: true, mode: "string" }),
+  status: text("status", { enum: ["active", "archived"] }).notNull().default("active"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const jobSkills = dk.table("job_skills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobPostingId: uuid("job_posting_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  skillName: text("skill_name").notNull(),
+  skillSlug: text("skill_slug").notNull(),
+  category: text("category"),
+  requirementType: text("requirement_type", { enum: REQUIREMENT_TYPES }).notNull(),
+  requiredLevel: integer("required_level").notNull(),
+  importance: integer("importance").notNull().default(1),
+  originalPhrase: text("original_phrase"),
+  reason: text("reason"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+});
+
+export const userSkills = dk.table("user_skills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  skillName: text("skill_name").notNull(),
+  skillSlug: text("skill_slug").notNull(),
+  category: text("category"),
+  level: integer("level"),
+  evidenceType: text("evidence_type", { enum: EVIDENCE_TYPES }).notNull().default("self_assessment"),
+  evidenceNote: text("evidence_note"),
+  confirmedByUser: boolean("confirmed_by_user").notNull().default(true),
+  goalWeight: numeric("goal_weight", { precision: 3, scale: 1 }).notNull().default("1"),
+  updatedAt: updatedAt(),
+});
+
+export const schema = {
+  profiles,
+  knowledgeNodes,
+  knowledgeContents,
+  knowledgeRelations,
+  userKnowledgeProgress,
+  aiUsage,
+  jobPostings,
+  jobSkills,
+  userSkills,
+  ...authSchema,
+};
 export { users } from "@/lib/db/auth-schema";

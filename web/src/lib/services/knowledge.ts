@@ -3,6 +3,7 @@ import { z } from "zod";
 import { KNOWLEDGE_PROMPT_VERSION, KNOWLEDGE_SYSTEM_PROMPT, knowledgeRetryPrompt, knowledgeUserPrompt } from "@/lib/ai/prompts/knowledge-v1";
 import { type AiProvider, AiOutputError, AiUnavailableError } from "@/lib/ai/provider";
 import { type KnowledgeContent, knowledgeContentSchema, knowledgeJsonSchema } from "@/lib/ai/schemas/knowledge";
+import { AI_TOTAL_BUDGET_MS, generateValidated as generateStructuredValidated } from "@/lib/ai/structured";
 import type { Db } from "@/lib/db/local";
 import {
   knowledgeContents,
@@ -61,14 +62,8 @@ export interface GenerateDeps {
   dailyLimit?: number;
 }
 
-const MAX_OUTPUT_TOKENS = 8192;
-/**
- * 整個生成（含格式錯誤後的重試）的總預算；要低於 API 路由的 maxDuration（120 秒），平台才不會在 catch 之前砍掉請求。
- * 單次呼叫最多用掉剩餘預算；剩餘不足 MIN_RETRY_MS 就不再重試。
- */
-const TOTAL_BUDGET_MS = 110_000;
-const MIN_RETRY_MS = 25_000;
-const MAX_ATTEMPTS = 2;
+/** 整個生成（含格式錯誤後的重試）的總預算，見 lib/ai/structured.ts；要低於 API 路由的 maxDuration（120 秒） */
+const TOTAL_BUDGET_MS = AI_TOTAL_BUDGET_MS;
 /**
  * 「生成中」佔位超過這個時間就視為逾時、可被接手。
  * 必須明顯大於最壞耗時（TOTAL_BUDGET_MS 加上資料庫往返），否則同一主題會被兩個請求同時生成。
@@ -450,8 +445,8 @@ async function loadSummary(db: Db, userId: string, id: string): Promise<Knowledg
   return toSummary(row);
 }
 
-/** slug 完全相同 → 名稱／別名不分大小寫相同 */
-async function findNodeByTopic(tx: Tx, slug: string, topic: string): Promise<{ id: string; status: NodeStatus } | null> {
+/** slug 完全相同 → 名稱／別名不分大小寫相同（職缺技能連結知識節點也用這個） */
+export async function findNodeByTopic(tx: Tx, slug: string, topic: string): Promise<{ id: string; status: NodeStatus } | null> {
   const lower = topic.toLowerCase();
   const [row] = await tx
     .select({ id: knowledgeNodes.id, status: knowledgeNodes.status })
@@ -486,64 +481,17 @@ async function generateValidated(
   topic: string,
   targetRole: string | null,
 ): Promise<{ content: KnowledgeContent; model: string; tokens: { inputTokens: number | null; outputTokens: number | null } }> {
-  const base = knowledgeUserPrompt({ topic, level: "初學到中級", targetRole: targetRole || "全端工程師" });
-  const jsonSchema = knowledgeJsonSchema();
-  let user = base;
-  let lastIssue = "";
-  const tokens = { inputTokens: 0, outputTokens: 0 };
-  let sawTokens = false;
-  const deadline = Date.now() + TOTAL_BUDGET_MS;
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const remaining = deadline - Date.now();
-    if (attempt > 0 && remaining < MIN_RETRY_MS) break;
-    const result = await provider.generateStructured({
-      system: KNOWLEDGE_SYSTEM_PROMPT,
-      user,
-      jsonSchema,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      timeoutMs: Math.max(remaining, 1),
-      hint: topic,
-    });
-    if (result.inputTokens !== null || result.outputTokens !== null) {
-      sawTokens = true;
-      tokens.inputTokens += result.inputTokens ?? 0;
-      tokens.outputTokens += result.outputTokens ?? 0;
-    }
-    const outcome = parseContent(result.text);
-    if (outcome.ok) {
-      return { content: outcome.content, model: result.model, tokens: sawTokens ? tokens : { inputTokens: null, outputTokens: null } };
-    }
-    lastIssue = outcome.issue;
-    user = knowledgeRetryPrompt(base, lastIssue);
-  }
-  throw new AiOutputError(lastIssue);
-}
-
-function parseContent(text: string): { ok: true; content: KnowledgeContent } | { ok: false; issue: string } {
-  let json: unknown;
-  try {
-    json = JSON.parse(stripCodeFence(text));
-  } catch {
-    return { ok: false, issue: "不是合法的 JSON" };
-  }
-  const parsed = knowledgeContentSchema.safeParse(json);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      issue: issuesFromZod(parsed.error)
-        .slice(0, 8)
-        .map((i) => `${i.field}: ${i.message}`)
-        .join("\n"),
-    };
-  }
-  return { ok: true, content: parsed.data };
-}
-
-function stripCodeFence(text: string): string {
-  const trimmed = text.trim();
-  const match = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
-  return match ? match[1] : trimmed;
+  const outcome = await generateStructuredValidated(provider, {
+    system: KNOWLEDGE_SYSTEM_PROMPT,
+    user: knowledgeUserPrompt({ topic, level: "初學到中級", targetRole: targetRole || "全端工程師" }),
+    schema: knowledgeContentSchema,
+    jsonSchema: knowledgeJsonSchema(),
+    retryPrompt: knowledgeRetryPrompt,
+    budgetMs: TOTAL_BUDGET_MS,
+    hint: topic,
+    kind: "knowledge",
+  });
+  return { content: outcome.data, model: outcome.model, tokens: outcome.tokens };
 }
 
 async function saveGenerated(
@@ -614,7 +562,8 @@ async function saveGenerated(
   }
 }
 
-async function findOrCreateStub(tx: Tx, slug: string, name: string, userId: string): Promise<string | null> {
+/** 找既有節點，沒有就建 stub（名稱保留原樣，之後由使用者生成內容） */
+export async function findOrCreateStub(tx: Tx, slug: string, name: string, userId: string): Promise<string | null> {
   const existing = await findNodeByTopic(tx, slug, name);
   if (existing) return existing.id;
   const [inserted] = await tx

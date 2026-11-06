@@ -10,7 +10,18 @@ describe("migration", () => {
     await bootstrapLocal(client);
     await bootstrapLocal(client);
     const tables = await client.query<{ table_name: string }>("select table_name from information_schema.tables where table_schema = 'dk' order by 1");
-    expect(tables.rows.map((r) => r.table_name)).toEqual(["ai_usage", "knowledge_contents", "knowledge_nodes", "knowledge_relations", "profiles", "rate_limits", "user_knowledge_progress"]);
+    expect(tables.rows.map((r) => r.table_name)).toEqual([
+      "ai_usage",
+      "job_postings",
+      "job_skills",
+      "knowledge_contents",
+      "knowledge_nodes",
+      "knowledge_relations",
+      "profiles",
+      "rate_limits",
+      "user_knowledge_progress",
+      "user_skills",
+    ]);
     const authTables = await client.query<{ table_name: string }>("select table_name from information_schema.tables where table_schema = 'auth' order by 1");
     expect(authTables.rows.map((r) => r.table_name)).toEqual(["accounts", "sessions", "users", "verifications"]);
     await client.close();
