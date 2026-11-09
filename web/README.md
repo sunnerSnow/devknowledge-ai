@@ -73,6 +73,8 @@ Neon 免費方案的 compute 閒置 5 分鐘會休眠，之後第一個請求多
 |---|---|
 | `npm run dev` | 開發伺服器 |
 | `npm test` | Vitest：單元測試＋在記憶體內 PGlite 上跑的整合測試（含 RLS、併發佔位、AI 重試） |
+| `npm run test:e2e` | Playwright：自動啟動本機示範模式（記憶體 PGlite、mock AI、無寄信）的開發伺服器，走過登入、知識頁生成、職缺分析→計畫→任務、面試練習、使用者隔離與跨站請求；預設用本機 Chrome，沒有就 `npx playwright install chromium` 後設 `PW_CHANNEL=chromium` |
+| `npm run db:seed -- <Email>` | 以該使用者身分把四份範例知識頁（RAG、LLM、AWS、Docker）寫進資料庫，不呼叫 AI（會在該使用者名下記 4 次使用量）；可重複執行。本機 PGlite 模式要先停掉 `next dev`，兩個程序同時開同一個資料目錄會壞檔 |
 | `npm run typecheck` | 產生路由型別並執行 `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run build` | 正式建置 |
@@ -102,6 +104,7 @@ src/app/(app)/            登入後的頁面（Dashboard、Knowledge、即將推
 src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕
 src/proxy.ts              未登入導向 /login（只是樂觀檢查）
 tests/                    Vitest
+e2e/                      Playwright（playwright.config.ts 會自己啟動伺服器）
 ```
 
 ### 視覺
@@ -129,4 +132,3 @@ tests/                    Vitest
 - 規格 4.5「貼上整份職缺先由 AI 拆欄位再確認」改成一次呼叫：貼上後直接分析，事後可編輯並重新分析（省免費額度）。
 - 知識內容的版本切換與更新提醒、Markdown 匯出、向量搜尋（P1）。
 - 刪除帳號與資料的流程。
-- Playwright e2e（Phase 5）；目前以 Vitest 整合測試＋手動走過主要流程。
