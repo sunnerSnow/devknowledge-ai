@@ -63,9 +63,28 @@ export function knowledgeJsonSchema(): Record<string, unknown> {
   return toProviderJsonSchema(z.toJSONSchema(knowledgeContentSchema, { target: "draft-2020-12" }));
 }
 
+/**
+ * 把 zod 產生的 JSON Schema 整理成 provider 接受的樣子：
+ * - 去掉 $schema
+ * - nullable 的 anyOf [X, null] 改成 type: [X, "null"]
+ * - 去掉 maxItems：Gemini 的 responseJsonSchema 對較大的 maxItems（實測 16、30）回 400 INVALID_ARGUMENT，
+ *   10 以下沒事；陣列長度一律交給 zod 在回來後驗證（超過會附錯誤重試一次）。
+ */
 export function toProviderJsonSchema(schema: unknown): Record<string, unknown> {
-  const out = simplifyNullable(schema) as Record<string, unknown>;
+  const out = simplifyNullable(dropKey(schema, "maxItems")) as Record<string, unknown>;
   delete out.$schema;
+  return out;
+}
+
+function dropKey(node: unknown, key: string): unknown {
+  if (Array.isArray(node)) return node.map((n) => dropKey(n, key));
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    // properties 底下的鍵是欄位名稱，不是關鍵字
+    if (k === key) continue;
+    out[k] = k === "properties" && v && typeof v === "object" ? Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([pk, pv]) => [pk, dropKey(pv, key)])) : dropKey(v, key);
+  }
   return out;
 }
 
