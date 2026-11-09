@@ -1,20 +1,33 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loginLocalAction } from "@/app/actions";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { LOCAL_USERS } from "@/lib/auth/local-users";
 import { getSessionUser } from "@/lib/auth/session";
-import { isLocalMode } from "@/lib/config";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { isLocalMode, mailReady, requireEmailVerification } from "@/lib/config";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "登入" };
 
 const POINTS = ["知識頁包含定義、原理、架構圖、程式碼、常見誤解與面試重點", "職缺技能與你的能力分開儲存，差距排序可解釋", "AI 產生的內容會標示來源與版本，請依官方文件確認"];
 
-export default async function LoginPage() {
+/** 其他帳號頁導回來時帶的提示（?notice=…）；只接受這幾個鍵 */
+const NOTICES: Record<string, string> = {
+  reset: "密碼已重設，請用新密碼登入。",
+  "check-mail": "帳號已建立。我們寄了一封驗證信給你，請到信箱點連結後再登入。",
+};
+
+export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (await getSessionUser()) redirect("/");
   const local = isLocalMode();
+  const canMail = mailReady();
+  const needVerify = requireEmailVerification();
+  const params = await searchParams;
+  const noticeKey = typeof params.notice === "string" ? params.notice : "";
+  const notice = Object.hasOwn(NOTICES, noticeKey) ? NOTICES[noticeKey] : null;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -73,8 +86,22 @@ export default async function LoginPage() {
             </>
           ) : null}
 
+          {notice ? (
+            <Alert className="mt-6" role="status">
+              <AlertDescription>{notice}</AlertDescription>
+            </Alert>
+          ) : null}
           <LoginForm />
-          <p className="mt-5 text-xs leading-6 tracking-[0.06em] text-muted-foreground">目前不需要驗證 Email；忘記密碼的重設功能稍後提供。</p>
+          {canMail ? (
+            <p className="mt-5 flex items-center justify-between gap-4 text-xs leading-6 tracking-[0.06em] text-muted-foreground">
+              <span>{needVerify ? "註冊後請到信箱點驗證連結再登入。" : "目前不需要驗證 Email。"}</span>
+              <Link href="/forgot-password" className="dotted-underline shrink-0 text-primary">
+                忘記密碼？
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-5 text-xs leading-6 tracking-[0.06em] text-muted-foreground">這個站沒有設定寄信服務：不需要驗證 Email，也暫時無法用 Email 重設密碼。</p>
+          )}
         </section>
       </main>
       <footer className="mx-auto w-full max-w-6xl px-6 py-8 font-display text-xs tracking-[0.16em] text-muted-foreground sm:px-10">© DevKnowledge AI</footer>

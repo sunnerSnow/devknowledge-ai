@@ -8,6 +8,7 @@ export interface SessionUser {
   id: string;
   email: string | null;
   name: string | null;
+  emailVerified: boolean;
 }
 
 /**
@@ -22,7 +23,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const result = await auth.api.getSession({ headers: requestHeaders });
   if (!result?.user) return null;
   // dk.profiles 在註冊時由 Better Auth 的 databaseHooks 建立
-  return { id: result.user.id, email: result.user.email ?? null, name: result.user.name ?? null };
+  return { id: result.user.id, email: result.user.email ?? null, name: result.user.name ?? null, emailVerified: Boolean(result.user.emailVerified) };
 });
 
 export async function requireUser(): Promise<SessionUser> {

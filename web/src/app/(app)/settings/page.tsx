@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
-import { aiEnv, isLocalMode } from "@/lib/config";
+import { aiEnv, isLocalMode, mailReady } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { getProfile } from "@/lib/services/profiles";
 import { ProfileForm } from "./profile-form";
+import { ResendVerification } from "./resend-verification";
 
 export const metadata: Metadata = { title: "設定" };
 
@@ -21,7 +22,11 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>個人資料</CardTitle>
-            <CardDescription>{user.email ?? user.id}</CardDescription>
+            <CardDescription>
+              {user.email ?? user.id}
+              {user.email ? <span className="ml-3 text-xs tracking-[0.12em]">{user.emailVerified ? "已驗證" : "未驗證"}</span> : null}
+              {user.email && !user.emailVerified && mailReady() && !isLocalMode() ? <ResendVerification /> : null}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileForm

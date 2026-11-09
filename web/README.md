@@ -61,7 +61,10 @@ Neon 免費方案的 compute 閒置 5 分鐘會休眠，之後第一個請求多
 
 - Email＋密碼，使用者、session、帳號表在 Postgres 的 `auth` schema（`db/migrations/20261104000000_auth.sql`），id 是 uuid，`dk.profiles.id` 直接引用。
 - session 存資料庫，cookie 只放 token（httpOnly、SameSite=Lax、正式環境 Secure）。
-- 目前**不強制驗證 Email**（沒有寄信服務），也還沒有忘記密碼；接 Resend 之類的服務後再開。
+- 忘記密碼（`/forgot-password` → 信裡的 `/reset-password?token=…`）與 Email 驗證（註冊時寄信，`/verify-email?token=…`）要有寄信服務：`MAIL_PROVIDER=resend` 加 `RESEND_API_KEY`（Resend 免費方案；沒驗證自己的網域時寄件者只能是 `onboarding@resend.dev`，而且只能寄給 Resend 帳號本人的信箱——單人使用剛好夠）。開發模式沒設時是 `log`，整封信印在伺服器日誌；正式環境沒設時是 `none`，登入頁會說明這兩個功能未開放。
+- 連結的網址由 `BETTER_AUTH_URL`（或 Vercel 的正式網域）決定，不看請求的 Host 標頭；token 要在頁面上按按鈕才送出，信箱的連結預覽不會把它用掉。重設密碼連結 30 分鐘有效、只能用一次，成功後所有舊 session 失效。
+- 預設**不強制驗證 Email**；設 `AUTH_REQUIRE_EMAIL_VERIFICATION=1` 後，註冊會先導到「請收信」提示，未驗證的帳號登入會被擋並重寄驗證信（本機示範模式不強制）。設定頁可重寄驗證信。寄信的動作都有限流（每個 IP／每個 Email／每位使用者）。
+- Vercel 預覽部署沒設 `BETTER_AUTH_URL` 時，連結用該次預覽的網址（`VERCEL_URL`）；正式部署用正式網域。
 - 每個頁面、API 與 Server Action 都自己檢查 session；`src/proxy.ts` 只看有沒有 cookie 做樂觀導向。
 
 ## 指令
@@ -122,7 +125,7 @@ tests/                    Vitest
 
 ## 還沒做的事
 
-- 職缺比較、間隔複習、Email 驗證與忘記密碼（Phase 5／P1）。
+- 職缺比較、間隔複習（P1）。
 - 規格 4.5「貼上整份職缺先由 AI 拆欄位再確認」改成一次呼叫：貼上後直接分析，事後可編輯並重新分析（省免費額度）。
 - 知識內容的版本切換與更新提醒、Markdown 匯出、向量搜尋（P1）。
 - 刪除帳號與資料的流程。
