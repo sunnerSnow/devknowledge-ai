@@ -41,6 +41,9 @@ export default defineConfig({
       PGLITE_DATA_DIR: "memory://",
       AI_PROVIDER: "mock",
       GEMINI_API_KEY: "",
+      // 測試會連續生成多次，不讓額度限制影響結果
+      AI_HOURLY_LIMIT: "1000",
+      AI_DAILY_LIMIT: "0",
       MAIL_PROVIDER: "none",
       AUTH_REQUIRE_EMAIL_VERIFICATION: "",
     },

@@ -73,8 +73,8 @@ Neon 免費方案的 compute 閒置 5 分鐘會休眠，之後第一個請求多
 |---|---|
 | `npm run dev` | 開發伺服器 |
 | `npm test` | Vitest：單元測試＋在記憶體內 PGlite 上跑的整合測試（含 RLS、併發佔位、AI 重試） |
-| `npm run test:e2e` | Playwright：自動啟動本機示範模式（記憶體 PGlite、mock AI、無寄信）的開發伺服器，走過登入、知識頁生成、職缺分析→計畫→任務、面試練習、使用者隔離與跨站請求；預設用本機 Chrome，沒有就 `npx playwright install chromium` 後設 `PW_CHANNEL=chromium` |
-| `npm run db:seed -- <Email>` | 以該使用者身分把四份範例知識頁（RAG、LLM、AWS、Docker）寫進資料庫，不呼叫 AI（會在該使用者名下記 4 次使用量）；可重複執行。本機 PGlite 模式要先停掉 `next dev`，兩個程序同時開同一個資料目錄會壞檔 |
+| `npm run test:e2e` | Playwright：自動啟動本機示範模式（記憶體 PGlite、mock AI、無寄信）的開發伺服器，走過登入、知識頁生成、職缺分析→計畫→任務、面試練習、使用者隔離與跨站請求；預設用本機 Chrome，沒有就 `npx playwright install chromium` 後設 `PW_CHANNEL=chromium`。跑之前先停掉 `npm run dev`（兩者共用 `.next` 目錄，同時跑會互相覆蓋） |
+| `npm run db:seed -- <Email>` | 以該使用者身分把四份範例知識頁（RAG、LLM、AWS、Docker）寫進資料庫；內容是 mock provider 內建的固定範例，不是 AI 產生、不會更新，適合當展示資料，不呼叫 AI（會在該使用者名下記 4 次使用量）；可重複執行。本機 PGlite 模式要先停掉 `next dev`，兩個程序同時開同一個資料目錄會壞檔 |
 | `npm run typecheck` | 產生路由型別並執行 `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run build` | 正式建置 |
