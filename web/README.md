@@ -105,6 +105,8 @@ tests/                    Vitest
 
 整頁淡青綠底、深灰細字、青藍色標題與底線連結；白色面板沒有邊框、圓角、陰影（`panel`）；按鈕直角（`Button`／`CtaButton`）；區塊標題是「英文襯線大字＋中文小字」（`PageHeader`／`SectionHeader`）；字距寬、留白大。字體 Noto Sans TC ＋ Cormorant Garamond（英文襯線）。token 與工具類別都在 `src/app/globals.css`。
 
+品牌圖示是兩圈等高線加一個定位點（「知識地圖」），以 `currentColor` 上色：`BrandMark`／`Brand`（`src/components/brand.tsx`）；`src/app/icon.svg`、`favicon.ico`、`apple-icon.png` 是青藍方塊上的反白版，`opengraph-image.png` 是分享預覽圖。
+
 ### 重要設計
 
 - **資料表放在 `dk` 與 `auth` schema，不在 `public`；所有存取都經過伺服器服務層。** `authenticated` 角色對 `auth` schema 完全沒有權限。
