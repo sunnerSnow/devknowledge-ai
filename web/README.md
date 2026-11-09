@@ -2,9 +2,9 @@
 
 從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`；設計與實作決策記在本檔「架構」與「視覺」兩節，品牌規範在 `../docs/brand-guidelines.md`。
 
-目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單。
+目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）＋ Phase 5（穩定化）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單；忘記密碼與 Email 驗證（要有寄信服務）、Playwright e2e、範例知識頁種子腳本。
 
-技術：Next.js 16.4（App Router）＋ TypeScript ＋ Tailwind 4 ＋ shadcn/ui ＋ React Hook Form ＋ zod ＋ Drizzle ORM ＋ PostgreSQL（正式用 Neon，本機與測試用 PGlite）＋ Better Auth ＋ Vitest。AI：Google Gemini（免費方案）或 mock。
+技術：Next.js 16.4（App Router）＋ TypeScript ＋ Tailwind 4 ＋ shadcn/ui ＋ React Hook Form ＋ zod ＋ Drizzle ORM ＋ PostgreSQL（正式用 Neon，本機與測試用 PGlite）＋ Better Auth ＋ Vitest ＋ Playwright。AI：Google Gemini（免費方案）或 mock。寄信：Resend（選用）。
 
 ## 快速開始（本機示範模式，不需要資料庫或 API 金鑰）
 
@@ -107,21 +107,27 @@ Neon 免費方案的 compute 閒置 5 分鐘會休眠，之後第一個請求多
 db/migrations/            SQL migration（schema、約束、RLS、權限的唯一來源）；本機 PGlite 啟動時自動執行
 scripts/migrate.ts        npm run db:migrate
 scripts/reset-password.ts npm run auth:reset-password
+scripts/seed-knowledge.ts npm run db:seed（四份範例知識頁）
 src/lib/ai/               AiProvider 介面、providers/{gemini,mock}、prompts（版本化）、schemas（zod）、fixtures
 src/lib/knowledge/slug.ts 技術名詞 → slug（純函式）
 src/lib/services/         knowledge（搜尋、取得、生成、進度）、jobs（職缺分析、差距與優先順序）、skills（使用者技能）、plans（學習計畫與任務）、practice（面試練習：出題、評估、複習、確認程度）、profiles、usage、rate-limit
 src/lib/skills/levels.ts  技能等級標籤與優先分數（純函式）
 src/lib/db/               Drizzle schema（dk 與 auth）、連線、withUser（RLS）、withService（共用資料）
-src/lib/auth/             Better Auth 設定、session、本機示範使用者
+src/lib/auth/             Better Auth 設定（含忘記密碼、Email 驗證的寄信）、session、本機示範使用者
+src/lib/mail.ts           寄信抽象層：resend（HTTP API）／log／none
+src/lib/config.ts         環境變數集中讀取（本機模式、AI 額度、網站網址、寄信設定）
+src/lib/validation/       登入、註冊、重設密碼表單的 zod schema
 src/lib/api/http.ts       Route Handler 包裝：登入、同源檢查、{ data, error } 回應格式
-src/app/api/auth/         Better Auth 端點
 src/app/api/knowledge/    GET 搜尋、POST generate、GET [slug]、PATCH [slug]/progress
 src/app/api/jobs/         POST analyze（建立＋分析）、GET 列表、GET／PATCH（可帶 reanalyze）／DELETE [id]
 src/app/api/skills/       GET 列表、POST（以名稱 upsert）、PATCH／DELETE [id]
 src/app/api/plans/        GET 列表、GET／PATCH（狀態）／DELETE [id]、PATCH [id]/tasks/[taskId]（任務狀態）；POST /api/jobs/[id]/learning-plan 產生
 src/app/api/practice/     GET／POST sessions（建立並出第一題）、GET／PATCH（結束）／DELETE [sessionId]、POST [sessionId]/questions（下一題）、POST [sessionId]/answer（評估）、PATCH attempts/[attemptId]（複習、確認程度）
-src/app/(app)/            登入後的頁面（Dashboard、Knowledge、即將推出頁、Settings）
-src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕
+src/app/login、forgot-password、reset-password、verify-email  未登入也能到的頁面（Server Action 在 src/app/actions.ts）
+src/app/(app)/            登入後的頁面：Dashboard、Knowledge、Jobs、Plans、Practice、Skills、Settings
+src/components/brand.tsx  品牌圖示 BrandMark／Brand（等高線＋定位點，currentColor）
+src/components/layout/    登入後的外框與導覽（app-shell、nav-links）、登入相關頁的外框（auth-shell）
+src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕；jobs／plans／practice／skills 各自一個資料夾
 src/proxy.ts              未登入導向 /login（只是樂觀檢查）
 tests/                    Vitest
 e2e/                      Playwright（playwright.config.ts 會自己啟動伺服器）
