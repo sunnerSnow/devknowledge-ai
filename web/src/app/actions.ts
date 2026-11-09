@@ -14,6 +14,7 @@ import { AppError } from "@/lib/errors";
 import { deleteJob, updateJob } from "@/lib/services/jobs";
 import { markViewed, setProgress } from "@/lib/services/knowledge";
 import { deletePlan, setPlanStatus, setTaskStatus } from "@/lib/services/plans";
+import { deleteSession, endSession, updateAttempt } from "@/lib/services/practice";
 import { updateProfile } from "@/lib/services/profiles";
 import { deleteUserSkill, upsertUserSkill } from "@/lib/services/skills";
 import { clientIp, consumeRateLimit } from "@/lib/services/rate-limit";
@@ -234,6 +235,62 @@ export async function deletePlanAction(planId: string): Promise<void> {
   revalidatePath("/plans");
   revalidatePath("/");
   redirect("/plans");
+}
+
+// ---------------------------------------------------------------------------
+// 面試練習（出題與評估走 API 路由；這裡是狀態操作）
+// ---------------------------------------------------------------------------
+
+export async function endSessionAction(sessionId: string): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await endSession(await getDb(), user.id, sessionId);
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/practice/${sessionId}`);
+  revalidatePath("/practice");
+  revalidatePath("/");
+  return { done: true };
+}
+
+export async function deleteSessionAction(sessionId: string): Promise<void> {
+  const user = await sessionOrRedirect();
+  try {
+    await deleteSession(await getDb(), user.id, sessionId);
+  } catch (error) {
+    if (!(error instanceof AppError)) logError(error);
+  }
+  revalidatePath("/practice");
+  revalidatePath("/");
+  redirect("/practice");
+}
+
+/** 加入／移出複習清單 */
+export async function setReviewFlagAction(sessionId: string, attemptId: string, reviewFlag: boolean): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await updateAttempt(await getDb(), user.id, attemptId, { reviewFlag });
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/practice/${sessionId}`);
+  revalidatePath("/practice");
+  return { done: true };
+}
+
+/** 使用者看完評估後自己確認程度（才會寫進 My Skills） */
+export async function confirmLevelAction(sessionId: string, attemptId: string, level: number | null): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await updateAttempt(await getDb(), user.id, attemptId, { confirmedLevel: level });
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/practice/${sessionId}`);
+  revalidatePath("/skills");
+  revalidatePath("/");
+  return { done: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 > 25 項 Vitest 測試、typecheck、lint、`next build` 通過；本機示範模式以 Chrome 走過登入→搜尋→AI 建立→標記進度→stub→別名搜尋→手機版。
 > 2026-11-05 稍後：Gemini 以真實金鑰實測通過（預設 gemini-3.6-flash、備用 flash-lite）；資料庫決定改用 **Neon**（Supabase 免費版只允許 2 個 active 專案），登入改 **Better Auth**（Email＋密碼，使用者表在 auth schema，RLS 不變），Supabase 相依已移除；`npm run db:migrate` 可對 Neon 跑 migration。Neon 已接上並實測。
 > **2026-11-06 已部署**：https://devknowledge-ai.vercel.app（Vercel 專案 devknowledge-ai，Root Directory `web`，函式 sin1；GitHub 整合，push main 自動部署）。Vercel 環境變數：DATABASE_URL（pooled）、BETTER_AUTH_SECRET、BETTER_AUTH_URL、AI_PROVIDER=gemini、GEMINI_API_KEY。正式站走過註冊／登入／登出／生成（Redis，17 秒）。踩坑：Vercel 的值不能帶引號；BETTER_AUTH_URL 與 BETTER_AUTH_SECRET 是兩個變數，漏了 secret 會 500。
-> **2026-11-06 稍後**：視覺改版（5a）、Phase 2 職缺分析（5b）、Phase 3 學習計畫（5c）完成。下一步：Phase 4 面試練習。
+> **2026-11-06 稍後**：視覺改版（5a）、Phase 2 職缺分析（5b）、Phase 3 學習計畫（5c）完成。**2026-11-09**：Phase 4 面試練習（5d）完成。下一步：Phase 5 穩定化（Email 驗證／忘記密碼、e2e、OpenRouter provider）。
 
 > 依據：`DevKnowledge_AI_MVP_Spec.md`（MVP 1.0）第 15 節的要求，先回報現況、第一階段範圍與環境變數，確認後再開發。
 > 日期：2026-11-05
@@ -196,6 +196,14 @@ Supabase 專案可以晚點再建（Phase 1 完成、本機驗證後）；migrat
 - 服務：`services/plans.ts`（從職缺差距產生、列表、詳情、任務狀態與知識進度回寫、計畫自動完成、封存、刪除、Dashboard 本週進度）。
 - 頁面：職缺頁「產生學習計畫」、`/plans`、`/plans/[id]`、Dashboard「本週學習進度」、導覽加 Plans。
 - 測試 5 項（無差距擋下、產生與裝箱、狀態與回寫、Dashboard／封存／刪除／RLS、職缺刪除後計畫保留）。
+
+## 5d. Phase 4 面試練習（2026-11-09 完成）
+
+- migration `20261109000000_practice.sql`：`practice_sessions`（職缺、知識節點、模式、技能、題型、目標等級、狀態）、`practice_questions`（題目、題型、rubric、參考回答、複合外鍵）、`practice_attempts`（回答、平均分、feedback jsonb、使用者確認的程度、複習標記）、RLS。
+- AI：`schemas/practice.ts`（出題：題目／題型／rubric／參考回答／相關主題；評估：四維度分數與理由、答對、遺漏、追問、參考回答、相關知識、總結）、`prompts/practice-v1.ts`（出題依目標等級與題型、避免重複；評估不以長短判斷、不給認定、回答是資料），mock 用模板出題、依長度給分並明說是示範。
+- 服務：`services/practice.ts`（建立 session 並出第一題、下一題（上限 10、要先答完）、作答評估（同題只能答一次）、結束、刪除、複習清單、確認程度→`upsertUserSkill`（interview_practice）、Dashboard 統計）。
+- 頁面：`/practice`（開始表單：職缺→技能→模式→題型；進行中、複習清單、紀錄）、`/practice/[sessionId]`（一次一題、作答、評估面板、加入複習、確認程度、下一題、結束）、職缺頁面試重點接入口、Dashboard 面板。
+- 測試 5 項（建立與題型輪替、無職缺的目標等級、作答與重複作答、確認程度與複習、結束／上限／RLS／刪除）。
 
 ## 6. 後續 Phase 概要（確認後再細化）
 

@@ -131,7 +131,9 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">分析沒有列出面試重點。</p>
                 )}
-                <p className="mt-4 text-xs tracking-[0.1em] text-muted-foreground">面試練習將在 PHASE 4 推出</p>
+                <Link href={`/practice?job=${job.id}`} className="dotted-underline mt-5 inline-block text-sm tracking-[0.1em] text-primary">
+                  用這份職缺的技能開始面試練習
+                </Link>
               </div>
             </div>
           </section>

@@ -5,6 +5,8 @@ import type { PlanGapInput } from "@/lib/ai/prompts/plan-v1";
 import type { JobAnalysis } from "@/lib/ai/schemas/job";
 import type { KnowledgeContent } from "@/lib/ai/schemas/knowledge";
 import type { LearningPlanOutput } from "@/lib/ai/schemas/plan";
+import type { PracticeEvaluationOutput, PracticeQuestionOutput } from "@/lib/ai/schemas/practice";
+import type { QuestionType } from "@/lib/db/schema";
 import { normalizeSlug } from "@/lib/knowledge/slug";
 
 /**
@@ -39,6 +41,12 @@ export function createMockProvider(options: { delayMs?: number } = {}): AiProvid
       }
       if (request.kind === "plan") {
         return { text: JSON.stringify(mockLearningPlan(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
+      }
+      if (request.kind === "practice_question") {
+        return { text: JSON.stringify(mockPracticeQuestion(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
+      }
+      if (request.kind === "practice_evaluate") {
+        return { text: JSON.stringify(mockPracticeEvaluation(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
       }
       const topic = (request.hint ?? "").trim() || "未命名技術";
       const key = FIXTURES[normalizeSlug(topic)];
@@ -189,6 +197,92 @@ export function mockLearningPlan(userPrompt: string): LearningPlanOutput {
     summary: `依優先分數排序，差距大的技能先排實作；每週控制在 ${weekly} 分鐘內。`,
     weeks,
     notes: ["mock provider 只依規則排程，沒有考慮技能之間的依賴。"],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 面試練習的 mock
+// ---------------------------------------------------------------------------
+
+const block = (prompt: string, label: string) => new RegExp(`<${label}>([\\s\\S]*?)</${label}>`).exec(prompt)?.[1]?.trim() ?? "";
+
+const QUESTION_TEMPLATES: Record<QuestionType, (skill: string, n: number) => Pick<PracticeQuestionOutput, "question" | "rubric">> = {
+  concept: (skill, n) => ({
+    question: n === 0 ? `請說明 ${skill} 解決了什麼問題，以及它的核心運作方式。` : `承上題，${skill} 常見的誤解有哪些？為什麼會有這些誤解？`,
+    rubric: [`有說明 ${skill} 要解決的問題`, "有描述核心運作方式或流程", "有舉出一個實際使用情境", "有提到一個限制或取捨"],
+  }),
+  scenario: (skill) => ({
+    question: `團隊的服務在上線後出現與 ${skill} 相關的效能問題：尖峰時段回應變慢、偶爾逾時。你會怎麼找出原因並處理？`,
+    rubric: ["有先確認症狀與量測指標，再推論原因", `有提出至少兩個與 ${skill} 相關的可能原因`, "有說明處理步驟與驗證方式", "有考慮到風險或回滾方案"],
+  }),
+  architecture: (skill) => ({
+    question: `要為一個中型產品導入 ${skill}，使用者約十萬、團隊五人。請說明你的架構設計、元件之間怎麼互動，以及你做了哪些取捨。`,
+    rubric: ["有畫出或描述主要元件與互動", `有說明 ${skill} 在架構裡的角色`, "有針對規模與團隊人數做取捨", "有提到監控、部署或維運的考量"],
+  }),
+  coding: (skill) => ({
+    question: `請描述你會怎麼用 ${skill} 實作一個最小可行範例：輸入、輸出、關鍵步驟與你會先寫哪段程式。`,
+    rubric: ["有定義清楚的輸入與輸出", "有列出關鍵步驟的順序", `有提到 ${skill} 的關鍵 API 或設定`, "有說明怎麼驗證結果正確"],
+  }),
+};
+
+/** 出題的 mock：依 <技能> 與 <題型> 套模板；已出過的題數決定用哪個變化 */
+export function mockPracticeQuestion(userPrompt: string): PracticeQuestionOutput {
+  const skill = block(userPrompt, "技能") || "這個技術";
+  const typeRaw = block(userPrompt, "題型").split("（")[0] as QuestionType;
+  const type: QuestionType = (["concept", "scenario", "architecture", "coding"] as const).includes(typeRaw) ? typeRaw : "concept";
+  let previous = 0;
+  try {
+    previous = (JSON.parse(block(userPrompt, "已出過的題目") || "[]") as unknown[]).length;
+  } catch {
+    previous = 0;
+  }
+  const t = QUESTION_TEMPLATES[type](skill, previous);
+  return {
+    question: t.question,
+    question_type: type,
+    skill,
+    rubric: t.rubric,
+    reference_answer: `（mock 參考回答）先說結論：${skill} 的目的與適用情境；再依評分重點逐點說明：${t.rubric.join("；")}。設定 AI_PROVIDER=gemini 會得到真正的題目與參考回答。`,
+    knowledge_topics: [skill],
+  };
+}
+
+/**
+ * 評估的 mock：真正的評估規則是「不以長短判斷」，但 mock 沒有理解能力，
+ * 只能依回答長度與是否提到技能名稱給分，並在 summary 明說這是示範評估。
+ */
+export function mockPracticeEvaluation(userPrompt: string): PracticeEvaluationOutput {
+  const skill = block(userPrompt, "技能") || "這個技術";
+  const answer = block(userPrompt, "使用者回答");
+  let rubric: string[] = [];
+  try {
+    rubric = JSON.parse(block(userPrompt, "評分重點") || "[]") as string[];
+  } catch {
+    rubric = [];
+  }
+  const length = answer.replace(/\s+/g, "").length;
+  const mentions = answer.toLowerCase().includes(skill.toLowerCase());
+  const base = length < 40 ? 1 : length < 150 ? 2 : 3;
+  const clamp = (n: number) => Math.max(0, Math.min(4, n));
+  const correctness = clamp(base + (mentions ? 1 : 0));
+  const completeness = clamp(base);
+  const reasoning = clamp(base - (length < 40 ? 1 : 0));
+  const clarity = clamp(length < 40 ? 1 : 3);
+  const covered = Math.min(rubric.length, Math.round((completeness / 4) * rubric.length));
+  const reason = (what: string) => `（mock）${what}：回答約 ${length} 字${mentions ? `，有提到 ${skill}` : `，沒有提到 ${skill}`}。`;
+  return {
+    scores: {
+      correctness: { score: correctness, reason: reason("技術正確性只依是否提到技能名稱與篇幅估計") },
+      completeness: { score: completeness, reason: reason("完整度依篇幅估計") },
+      reasoning: { score: reasoning, reason: reason("推理與取捨依篇幅估計") },
+      clarity: { score: clarity, reason: reason("表達清晰度依篇幅估計") },
+    },
+    correct_points: rubric.slice(0, covered),
+    missing_points: rubric.slice(covered),
+    follow_up_questions: [`如果 ${skill} 在正式環境出問題，你會先看哪些指標？`],
+    reference_answer: `（mock 參考回答）依評分重點逐點說明：${rubric.join("；") || "（無）"}。`,
+    related_topics: [skill],
+    summary: "這是 mock provider 的示範評估，只依回答長度與是否提到技能名稱給分，不代表真實能力；設定 AI_PROVIDER=gemini 後會依評分規準實際評估。",
   };
 }
 

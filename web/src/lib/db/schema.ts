@@ -196,6 +196,71 @@ export const learningTasks = dk.table("learning_tasks", {
   updatedAt: updatedAt(),
 });
 
+// ---------------------------------------------------------------------------
+// Phase 4：面試練習
+// ---------------------------------------------------------------------------
+
+export const PRACTICE_MODES = ["interview", "quiz", "coding"] as const;
+export type PracticeMode = (typeof PRACTICE_MODES)[number];
+
+/** 單題的題型 */
+export const QUESTION_TYPES = ["concept", "scenario", "architecture", "coding"] as const;
+export type QuestionType = (typeof QUESTION_TYPES)[number];
+
+/** 練習時選的題型：mixed 會輪流出不同題型 */
+export const SESSION_QUESTION_TYPES = [...QUESTION_TYPES, "mixed"] as const;
+export type SessionQuestionType = (typeof SESSION_QUESTION_TYPES)[number];
+
+export const SESSION_STATUSES = ["active", "ended"] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+export const practiceSessions = dk.table("practice_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  jobPostingId: uuid("job_posting_id"),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  mode: text("mode", { enum: PRACTICE_MODES }).notNull().default("interview"),
+  topic: text("topic").notNull(),
+  topicSlug: text("topic_slug"),
+  questionType: text("question_type", { enum: SESSION_QUESTION_TYPES }).notNull().default("mixed"),
+  targetLevel: integer("target_level"),
+  status: text("status", { enum: SESSION_STATUSES }).notNull().default("active"),
+  createdAt: createdAt(),
+  endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+});
+
+export const practiceQuestions = dk.table("practice_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  skillName: text("skill_name"),
+  question: text("question").notNull(),
+  questionType: text("question_type", { enum: QUESTION_TYPES }).notNull(),
+  rubric: jsonb("rubric").$type<string[]>().notNull().default([]),
+  referenceAnswer: text("reference_answer"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  provider: text("provider"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  createdAt: createdAt(),
+});
+
+export const practiceAttempts = dk.table("practice_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  answer: text("answer").notNull(),
+  score: numeric("score", { precision: 3, scale: 1 }),
+  feedback: jsonb("feedback"),
+  userConfirmedLevel: integer("user_confirmed_level"),
+  reviewFlag: boolean("review_flag").notNull().default(false),
+  provider: text("provider"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  createdAt: createdAt(),
+});
+
 export const schema = {
   profiles,
   knowledgeNodes,
@@ -208,6 +273,9 @@ export const schema = {
   userSkills,
   learningPlans,
   learningTasks,
+  practiceSessions,
+  practiceQuestions,
+  practiceAttempts,
   ...authSchema,
 };
 export { users } from "@/lib/db/auth-schema";

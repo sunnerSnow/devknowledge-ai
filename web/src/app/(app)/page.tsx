@@ -10,6 +10,7 @@ import { PROGRESS_STATUSES } from "@/lib/db/schema";
 import { listJobs, listTopGaps } from "@/lib/services/jobs";
 import { getProgressStats, listRecentKnowledge } from "@/lib/services/knowledge";
 import { listWeekProgress } from "@/lib/services/plans";
+import { getPracticeStats } from "@/lib/services/practice";
 import { getProfile } from "@/lib/services/profiles";
 
 const EXAMPLES = ["RAG", "LLM", "AWS", "Docker", "React", "PostgreSQL"];
@@ -17,13 +18,14 @@ const EXAMPLES = ["RAG", "LLM", "AWS", "Docker", "React", "PostgreSQL"];
 export default async function DashboardPage() {
   const user = await requireUser();
   const db = await getDb();
-  const [recent, stats, profile, gaps, jobs, weekProgress] = await Promise.all([
+  const [recent, stats, profile, gaps, jobs, weekProgress, practice] = await Promise.all([
     listRecentKnowledge(db, user.id, 6),
     getProgressStats(db, user.id),
     getProfile(db, user.id),
     listTopGaps(db, user.id, 5),
     listJobs(db, user.id),
     listWeekProgress(db, user.id),
+    getPracticeStats(db, user.id),
   ]);
   const activeJobs = jobs.filter((j) => j.status === "active");
   const total = PROGRESS_STATUSES.reduce((n, s) => n + stats[s], 0);
@@ -83,9 +85,21 @@ export default async function DashboardPage() {
           <div>
             <h2 className="font-display text-2xl leading-none text-primary">Practice</h2>
             <p className="section-sub mt-2 text-xs">面試練習</p>
-            <p className="mt-6 text-[15px] leading-8 tracking-[0.1em]">一次一題，依評分規準給回饋。還沒有練習紀錄。</p>
+            <p className="mt-6 text-[15px] leading-8 tracking-[0.1em]">
+              {practice.answeredCount ? `已練習 ${practice.sessionCount} 次、作答 ${practice.answeredCount} 題${practice.averageScore !== null ? `，平均 ${practice.averageScore.toFixed(1)} / 4` : ""}。` : "一次一題，依評分規準給回饋。"}
+              {practice.reviewCount ? `有 ${practice.reviewCount} 題在複習清單。` : "AI 的分數不會未經你確認就改寫技能等級。"}
+            </p>
           </div>
-          <span className="text-xs tracking-[0.2em] text-muted-foreground">PHASE 4 準備中</span>
+          <div className="flex items-center justify-between gap-4">
+            <CtaButton href="/practice" variant="secondary">
+              開始練習
+            </CtaButton>
+            {practice.reviewCount ? (
+              <Link href="/practice" className="dotted-underline text-sm tracking-[0.12em] text-primary">
+                複習清單
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 
