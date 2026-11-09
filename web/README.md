@@ -61,11 +61,31 @@ Neon 免費方案的 compute 閒置 5 分鐘會休眠，之後第一個請求多
 
 - Email＋密碼，使用者、session、帳號表在 Postgres 的 `auth` schema（`db/migrations/20261104000000_auth.sql`），id 是 uuid，`dk.profiles.id` 直接引用。
 - session 存資料庫，cookie 只放 token（httpOnly、SameSite=Lax、正式環境 Secure）。
-- 忘記密碼（`/forgot-password` → 信裡的 `/reset-password?token=…`）與 Email 驗證（註冊時寄信，`/verify-email?token=…`）要有寄信服務：`MAIL_PROVIDER=resend` 加 `RESEND_API_KEY`（Resend 免費方案；沒驗證自己的網域時寄件者只能是 `onboarding@resend.dev`，而且只能寄給 Resend 帳號本人的信箱——單人使用剛好夠）。開發模式沒設時是 `log`，整封信印在伺服器日誌；正式環境沒設時是 `none`，登入頁會說明這兩個功能未開放。
+- 忘記密碼（`/forgot-password` → 信裡的 `/reset-password?token=…`）與 Email 驗證（註冊時寄信，`/verify-email?token=…`）要有寄信服務，申請方式見下一節「接上 Resend」。開發模式沒設時是 `log`，整封信印在伺服器日誌；正式環境沒設時是 `none`，登入頁會說明這兩個功能未開放。
 - 連結的網址由 `BETTER_AUTH_URL`（或 Vercel 的正式網域）決定，不看請求的 Host 標頭；token 要在頁面上按按鈕才送出，信箱的連結預覽不會把它用掉。重設密碼連結 30 分鐘有效、只能用一次，成功後所有舊 session 失效。
 - 預設**不強制驗證 Email**；設 `AUTH_REQUIRE_EMAIL_VERIFICATION=1` 後，註冊會先導到「請收信」提示，未驗證的帳號登入會被擋並重寄驗證信（本機示範模式不強制）。設定頁可重寄驗證信。寄信的動作都有限流（每個 IP／每個 Email／每位使用者）。
 - Vercel 預覽部署沒設 `BETTER_AUTH_URL` 時，連結用該次預覽的網址（`VERCEL_URL`）；正式部署用正式網域。
 - 每個頁面、API 與 Server Action 都自己檢查 session；`src/proxy.ts` 只看有沒有 cookie 做樂觀導向。
+
+## 接上 Resend（寄信，選用）
+
+忘記密碼與 Email 驗證要寄信才能用；正式環境沒設寄信服務時這兩個功能自動關閉，其他功能不受影響（開發模式沒設時信會印在伺服器日誌）。寄信走 Resend 的 HTTP API（沒有 SMTP 設定）。免費方案目前是每月 3,000 封、每天 100 封、最多 3 個網域，額度用完直接停寄、不會扣款；數字以 Resend 定價頁為準。
+
+1. 到 https://resend.com 用 Email 或 GitHub 註冊帳號（免費方案不用綁信用卡）。
+2. 到 **API Keys**（https://resend.com/api-keys）→ **Create API Key**：名稱隨意（例如 `devknowledge-vercel`），權限選 **Sending access** 就夠（不要 Full access），網域可先不限。**金鑰只會顯示這一次**，建立後看不到也改不了，請馬上複製；弄丟就刪掉重建。
+3. 設定環境變數（本機放 `.env.local`，正式站放 Vercel 專案的 Environment Variables，值不要加引號）：
+   ```
+   MAIL_PROVIDER=resend
+   RESEND_API_KEY=re_…
+   # MAIL_FROM=DevKnowledge AI <onboarding@resend.dev>   （預設；驗證網域後再改）
+   # AUTH_REQUIRE_EMAIL_VERIFICATION=1                   （要強制驗證 Email 才開）
+   ```
+   Vercel 改了環境變數要重新部署才生效。設了 `MAIL_PROVIDER=resend` 卻沒給金鑰時，寄信功能會關閉並在伺服器日誌留一條錯誤，登入頁會說明這兩個功能未開放、`/forgot-password` 會顯示「還沒有設定寄信服務」。
+4. 測試：到 `/forgot-password` 輸入**你 Resend 帳號本人的信箱**，應該幾秒內收到信；Resend 控制台的 **Emails** 頁會列出每封信的狀態與退信原因。
+
+**沒驗證自己網域前的限制**：寄件者只能是 `onboarding@resend.dev`，而且**只能寄給 Resend 帳號本人的 Email**，寄給別人會回 403。這個專案是單人使用、註冊信箱和 Resend 帳號相同就剛好夠用。要讓其他使用者也收得到信，要在 **Domains**（https://resend.com/domains）加自己的網域、照頁面指示到 DNS 加上 DKIM 與 SPF 紀錄並等它驗證通過，再把 `MAIL_FROM` 改成該網域的地址（例如 `DevKnowledge AI <no-reply@你的網域>`）。
+
+金鑰只在伺服器端使用，不要 commit 進 repo（`.env.local` 已在 `.gitignore`）；`.env.example` 有對應的註解範本。
 
 ## 指令
 
