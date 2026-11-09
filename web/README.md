@@ -1,6 +1,6 @@
 # DevKnowledge AI web
 
-從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`，實作計畫與決策在 `PLAN.md`。
+從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`；設計與實作決策記在本檔「架構」與「視覺」兩節，品牌規範在 `../docs/brand-guidelines.md`。
 
 目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單。
 
@@ -105,7 +105,7 @@ tests/                    Vitest
 
 整頁淡青綠底、深灰細字、青藍色標題與底線連結；白色面板沒有邊框、圓角、陰影（`panel`）；按鈕直角（`Button`／`CtaButton`）；區塊標題是「英文襯線大字＋中文小字」（`PageHeader`／`SectionHeader`）；字距寬、留白大。字體 Noto Sans TC ＋ Cormorant Garamond（英文襯線）。token 與工具類別都在 `src/app/globals.css`。
 
-品牌圖示是兩圈等高線加一個定位點（「知識地圖」），以 `currentColor` 上色：`BrandMark`／`Brand`（`src/components/brand.tsx`）；`src/app/icon.svg`、`favicon.ico`、`apple-icon.png` 是青藍方塊上的反白版，`opengraph-image.png` 是分享預覽圖。
+品牌圖示是兩圈等高線加一個定位點（「知識地圖」），以 `currentColor` 上色：`BrandMark`／`Brand`（`src/components/brand.tsx`）；`src/app/icon.svg`、`favicon.ico`、`apple-icon.png` 是青藍方塊上的反白版，`opengraph-image.png` 是分享預覽圖。完整的色彩、字體、圖示用法與語氣規範在 `../docs/brand-guidelines.md`，向量檔在 `../docs/brand/`。
 
 ### 重要設計
 

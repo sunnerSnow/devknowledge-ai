@@ -40,5 +40,5 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 export function CategoryBadge({ category }: { category: string | null }) {
   if (!category) return null;
-  return <span className="text-[11px] tracking-[0.16em] text-primary">{CATEGORY_LABELS[category] ?? category}</span>;
+  return <span className="text-xs tracking-[0.16em] text-primary">{CATEGORY_LABELS[category] ?? category}</span>;
 }
