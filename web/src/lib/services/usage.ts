@@ -27,6 +27,15 @@ export async function assertUsageWithinLimit(tx: Tx, userId: string, limit: numb
   }
 }
 
+/** 同一使用者同一種 AI 呼叫還在進行中（最近 2 分鐘內 started 未結束）就擋下，避免連點各自花一次 AI 額度 */
+export async function assertNoInflight(tx: Tx, userId: string, kind: AiUsageKind, message: string): Promise<void> {
+  const [row] = await tx
+    .select({ n: sql<number>`count(*)::int` })
+    .from(aiUsage)
+    .where(and(eq(aiUsage.userId, userId), eq(aiUsage.kind, kind), eq(aiUsage.status, "started"), gt(aiUsage.createdAt, sql`now() - interval '2 minutes'`)));
+  if ((row?.n ?? 0) > 0) throw new AppError("in_progress", message, 409);
+}
+
 export async function startUsage(tx: Tx, userId: string, kind: AiUsageKind, provider: string, modelName: string): Promise<string> {
   const [row] = await tx.insert(aiUsage).values({ userId, kind, provider, modelName }).returning({ id: aiUsage.id });
   return row.id;

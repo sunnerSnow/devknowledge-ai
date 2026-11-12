@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { PLAN_PROMPT_VERSION, PLAN_SYSTEM_PROMPT, type PlanGapInput, planRetryPrompt, planUserPrompt } from "@/lib/ai/prompts/plan-v1";
 import type { AiProvider } from "@/lib/ai/provider";
-import { knowledgeContentSchema } from "@/lib/ai/schemas/knowledge";
+import { storedKnowledgeContentSchema } from "@/lib/ai/schemas/knowledge";
 import { type LearningPlanOutput, learningPlanSchema, planJsonSchema } from "@/lib/ai/schemas/plan";
 import { generateValidated } from "@/lib/ai/structured";
 import { logError } from "@/lib/api/http";
@@ -180,7 +180,7 @@ async function loadKnowledgeTasks(db: Db, nodeIds: string[]): Promise<Map<string
   const map = new Map<string, string[]>();
   for (const r of rows) {
     if (map.has(r.nodeId)) continue; // 只取最新版
-    const parsed = knowledgeContentSchema.safeParse(r.content);
+    const parsed = storedKnowledgeContentSchema.safeParse(r.content);
     map.set(r.nodeId, parsed.success ? parsed.data.learning_tasks.map((t) => t.title) : []);
   }
   return map;

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { GenerateButton } from "@/components/knowledge/generate-button";
 import { GeneratingWatcher } from "@/components/knowledge/generating-watcher";
 import { articleSections, KnowledgeArticle } from "@/components/knowledge/knowledge-article";
+import { KnowledgeQuiz } from "@/components/knowledge/knowledge-quiz";
 import { CategoryBadge, ProgressBadge } from "@/components/knowledge/progress-badge";
 import { ProgressControl } from "@/components/knowledge/progress-control";
 import { RelationsPanel } from "@/components/knowledge/relations-panel";
@@ -12,6 +13,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
 import { getKnowledge, type KnowledgeDetail } from "@/lib/services/knowledge";
+import { getLatestQuizAttempt, type QuizAttemptView } from "@/lib/services/knowledge-quiz";
 
 async function load(slug: string): Promise<KnowledgeDetail | null> {
   const user = await requireUser();
@@ -21,6 +23,13 @@ async function load(slug: string): Promise<KnowledgeDetail | null> {
     if (e instanceof AppError && e.status === 404) return null;
     throw e;
   }
+}
+
+/** 目前內容版本的最近一次小測驗作答（沒有小測驗就不查） */
+async function loadQuizAttempt(detail: KnowledgeDetail): Promise<QuizAttemptView | null> {
+  if (!detail.content?.quiz.length || !detail.contentMeta) return null;
+  const user = await requireUser();
+  return getLatestQuizAttempt(await getDb(), user.id, detail.id, detail.contentMeta.version);
 }
 
 export async function generateMetadata({ params }: PageProps<"/knowledge/[slug]">): Promise<Metadata> {
@@ -37,6 +46,20 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
   const updated = new Date(detail.contentMeta?.createdAt ?? detail.updatedAt).toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric" });
   const sections = detail.content ? articleSections(detail.content) : [];
   const providerLabel = detail.contentMeta ? (detail.contentMeta.provider === "mock" ? "mock provider 固定範例" : `${detail.contentMeta.provider} ${detail.contentMeta.modelName ?? ""}`.trim()) : null;
+  const quizAttempt = await loadQuizAttempt(detail);
+  const progressStatus = detail.progress?.status ?? "not_started";
+  const quiz =
+    detail.content?.quiz.length && detail.contentMeta ? (
+      <KnowledgeQuiz
+        key={detail.contentMeta.version}
+        nodeId={detail.id}
+        slug={detail.slug}
+        version={detail.contentMeta.version}
+        questions={detail.content.quiz.map((q) => q.question)}
+        initialAttempt={quizAttempt}
+        progressStatus={progressStatus}
+      />
+    ) : null;
 
   return (
     <div className="grid gap-12">
@@ -55,12 +78,16 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
             {detail.aliases.length ? <p className="mt-4 text-xs tracking-[0.08em] text-muted-foreground">別名：{detail.aliases.join("、")}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {detail.content ? <ProgressControl nodeId={detail.id} slug={detail.slug} status={detail.progress?.status ?? "not_started"} /> : <ProgressBadge status={detail.progress?.status} />}
+            {/* key：小測驗後按「標記為已理解」會 refresh，狀態改變時重新掛載才會顯示新狀態 */}
+            {detail.content ? <ProgressControl key={progressStatus} nodeId={detail.id} slug={detail.slug} status={progressStatus} /> : <ProgressBadge status={detail.progress?.status} />}
             {detail.content && !detail.generating ? <GenerateButton topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" /> : null}
           </div>
         </div>
         {detail.generating ? <GeneratingWatcher slug={detail.slug} /> : null}
         {detail.content ? <p className="border-l-2 border-primary pl-3 text-xs leading-6 text-muted-foreground">此頁內容由 AI 產生（{providerLabel}），版本、API 與價格等易變資訊請依官方文件確認。</p> : null}
+        {detail.content && !detail.content.quick_take && !detail.generating ? (
+          <p className="text-xs leading-6 text-muted-foreground">這一頁是舊版格式；按「重新生成」可以加上快速理解卡與小測驗（舊版本會保留）。</p>
+        ) : null}
       </header>
 
       {detail.content ? (
@@ -78,7 +105,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
             </ol>
           </nav>
           <div className="min-w-0">
-            <KnowledgeArticle content={detail.content} />
+            <KnowledgeArticle content={detail.content} quiz={quiz} />
           </div>
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <p className="section-sub mb-4">知識關聯</p>

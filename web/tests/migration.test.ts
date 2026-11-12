@@ -16,6 +16,7 @@ describe("migration", () => {
       "job_skills",
       "knowledge_contents",
       "knowledge_nodes",
+      "knowledge_quiz_attempts",
       "knowledge_relations",
       "learning_plans",
       "learning_tasks",
@@ -54,6 +55,8 @@ describe("migration", () => {
     expect(byTable.knowledge_contents).toBe("SELECT");
     expect(byTable.knowledge_relations).toBe("SELECT");
     expect(byTable.user_knowledge_progress).toBe("DELETE, INSERT, SELECT, UPDATE");
+    // 小測驗作答只能新增、讀取、刪除，不能改批改結果
+    expect(byTable.knowledge_quiz_attempts).toBe("DELETE, INSERT, SELECT");
   });
 
   it("search_text 由 trigger 維護，pg_trgm 索引可用", async () => {

@@ -78,7 +78,7 @@ describe("生成知識頁（Flow A）", () => {
     expect(detail.content?.prerequisites.map((p) => p.name)).toEqual(["LLM", "Embedding", "Vector Database"]);
     expect(detail.content?.code_examples.length).toBeGreaterThan(0);
     expect(detail.content?.interview_topics.length).toBe(3);
-    expect(detail.contentMeta).toMatchObject({ version: 1, provider: "mock", promptVersion: "knowledge-v1" });
+    expect(detail.contentMeta).toMatchObject({ version: 1, provider: "mock", promptVersion: "knowledge-v2" });
 
     const prereqs = detail.relations.filter((r) => r.type === "prerequisite").map((r) => r.node);
     expect(prereqs.map((n) => n.slug).sort()).toEqual(["embedding", "llm", "vector-database"]);

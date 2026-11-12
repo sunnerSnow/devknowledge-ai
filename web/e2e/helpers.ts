@@ -20,7 +20,7 @@ export async function registerUser(page: Page, prefix: string): Promise<string> 
   return email;
 }
 
-/** 到某個主題的知識頁；還沒有就用 AI（mock）建立 */
+/** 到某個主題的知識頁；還沒有、或只是其他頁面建立的 stub，就用 AI（mock）建立 */
 export async function ensureKnowledgePage(page: Page, topic: string, slug: string): Promise<void> {
   await page.goto(`/knowledge?q=${encodeURIComponent(topic)}`);
   const generate = page.getByRole("button", { name: new RegExp(`用 AI 建立「${topic}」知識頁`) });
@@ -29,8 +29,10 @@ export async function ensureKnowledgePage(page: Page, topic: string, slug: strin
     await page.waitForURL(new RegExp(`/knowledge/${slug}$`));
   } else {
     await page.goto(`/knowledge/${slug}`);
+    // stub（例如職缺分析建立的技能節點）在知識頁上才有建立按鈕
+    if (await generate.count()) await generate.click();
   }
-  await expect(page.getByRole("heading", { name: "一句話理解" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "快速理解" })).toBeVisible();
 }
 
 /** 新增一份職缺並等 AI（mock）分析完成，回傳職缺頁網址 */

@@ -3,7 +3,8 @@ import path from "node:path";
 import type { AiProvider, StructuredRequest, StructuredResult } from "@/lib/ai/provider";
 import type { PlanGapInput } from "@/lib/ai/prompts/plan-v1";
 import type { JobAnalysis } from "@/lib/ai/schemas/job";
-import type { KnowledgeContent } from "@/lib/ai/schemas/knowledge";
+import type { GeneratedKnowledgeContent } from "@/lib/ai/schemas/knowledge";
+import type { QuizGradeOutput, QuizVerdict } from "@/lib/ai/schemas/knowledge-quiz";
 import type { LearningPlanOutput } from "@/lib/ai/schemas/plan";
 import type { PracticeEvaluationOutput, PracticeQuestionOutput } from "@/lib/ai/schemas/practice";
 import type { QuestionType } from "@/lib/db/schema";
@@ -47,6 +48,9 @@ export function createMockProvider(options: { delayMs?: number } = {}): AiProvid
       }
       if (request.kind === "practice_evaluate") {
         return { text: JSON.stringify(mockPracticeEvaluation(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
+      }
+      if (request.kind === "knowledge_quiz") {
+        return { text: JSON.stringify(mockQuizGrade(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
       }
       const topic = (request.hint ?? "").trim() || "未命名技術";
       const key = FIXTURES[normalizeSlug(topic)];
@@ -286,14 +290,66 @@ export function mockPracticeEvaluation(userPrompt: string): PracticeEvaluationOu
   };
 }
 
+// ---------------------------------------------------------------------------
+// 知識頁小測驗批改的 mock
+// ---------------------------------------------------------------------------
+
+const UNKNOWN_ANSWER_RE = /^(不知道|不會|不清楚|不確定|沒概念|idk|i\s*don'?t\s*know)?[。.!！?？]*$/i;
+
+/**
+ * 批改的 mock：沒有理解能力，只看回答裡有沒有出現批改重點的關鍵詞。
+ * 過半重點有命中算答對、有命中算部分正確、都沒有算答錯；空白或「不知道」算沒作答。
+ */
+export function mockQuizGrade(userPrompt: string): QuizGradeOutput {
+  let items: { question: string; standard_answer: string; key_points: string[]; user_answer: string }[] = [];
+  try {
+    items = JSON.parse(block(userPrompt, "題目與回答") || "[]");
+  } catch {
+    items = [];
+  }
+  const results = items.map((it) => {
+    const answer = (it.user_answer ?? "").trim().toLowerCase();
+    let verdict: QuizVerdict;
+    if (UNKNOWN_ANSWER_RE.test(answer)) verdict = "unanswered";
+    else {
+      const hits = it.key_points.filter((p) =>
+        p
+          .toLowerCase()
+          .split(/[\s,，、。；;：:（）()「」/+*=×\-]+/)
+          .some((token) => token.length >= 2 && answer.includes(token)),
+      ).length;
+      verdict = hits * 2 >= it.key_points.length ? "correct" : hits > 0 ? "partial" : "incorrect";
+    }
+    const correct = verdict === "correct";
+    return {
+      verdict,
+      reason: `（mock）依關鍵詞比對：${correct ? "回答涵蓋了過半的批改重點" : verdict === "unanswered" ? "沒有作答" : "沒有涵蓋足夠的批改重點"}。`,
+      correction: correct ? null : `（mock）正確觀念：${it.standard_answer}`.slice(0, 400),
+      analogy: correct ? null : "（mock）設定 AI_PROVIDER=gemini 後會給真正的比喻。",
+    };
+  });
+  const passed = results.filter((r) => r.verdict === "correct").length;
+  return {
+    results,
+    summary: `（mock）${results.length} 題答對 ${passed} 題。這是 mock provider 依關鍵詞比對的示範批改，不代表真實理解程度；設定 AI_PROVIDER=gemini 後會逐題理解你的回答。`,
+  };
+}
+
 /** 不在 fixtures 裡的主題：給一份合法但內容是佔位說明的知識頁 */
-export function genericContent(topic: string): KnowledgeContent {
+export function genericContent(topic: string): GeneratedKnowledgeContent {
   return {
     name: topic,
     english_name: null,
     category: "General",
     aliases: [],
     summary: `${topic} 的示範知識頁：目前使用 mock provider，內容為佔位範本，不是 AI 產生的真實內容。`,
+    quick_take: {
+      core: `${topic} 的示範內容：設定真正的 AI provider 後，這裡會是一句話結論。`,
+      analogy: "mock provider 就像樣品屋：格局都在，但家具是展示用的。",
+      key_numbers: null,
+      interview_answer: "（示範）面試 30 秒口語版會出現在這裡：先講結論，再補一個原因與一個實務做法。",
+      in_practice: "（示範）設定 AI_PROVIDER=gemini 與 GEMINI_API_KEY，再按「重新生成」。",
+    },
     why_it_matters:
       "設定 AI_PROVIDER=gemini 與 GEMINI_API_KEY 後重新生成，才會得到真正的知識內容。這份範本用來確認儲存、顯示、進度與關聯的流程都能運作。",
     prerequisites: [{ name: "HTTP", reason: "示範用的前置知識，實際內容會由 AI 依主題產生。" }],
@@ -327,5 +383,10 @@ export function genericContent(topic: string): KnowledgeContent {
     related_topics: [],
     learning_tasks: [{ title: "設定 Gemini 金鑰並重新生成", description: "到 aistudio.google.com 建立金鑰，設定環境變數後按「重新生成」。", estimated_minutes: 10 }],
     caveats: ["mock provider 的內容是固定範本。"],
+    quiz: [
+      { question: `用自己的話說明：為什麼這一頁 ${topic} 的內容不是真的 AI 產生的？`, answer: "因為目前使用 mock provider，只會回傳固定範本，沒有呼叫任何外部 AI 服務。", key_points: ["mock provider", "固定範本"] },
+      { question: "要得到真正的知識內容，需要設定哪兩個環境變數？", answer: "AI_PROVIDER=gemini 與 GEMINI_API_KEY。", key_points: ["AI_PROVIDER", "GEMINI_API_KEY"] },
+      { question: "設定好之後，要在知識頁按哪個按鈕更新內容？", answer: "按「重新生成」，會產生新版本的內容，舊版本仍保留。", key_points: ["重新生成", "新版本"] },
+    ],
   };
 }

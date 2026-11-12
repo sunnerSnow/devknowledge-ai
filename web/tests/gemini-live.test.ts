@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { KNOWLEDGE_SYSTEM_PROMPT, knowledgeUserPrompt } from "@/lib/ai/prompts/knowledge-v1";
+import { KNOWLEDGE_SYSTEM_PROMPT, knowledgeUserPrompt } from "@/lib/ai/prompts/knowledge-v2";
 import { createGeminiProvider } from "@/lib/ai/providers/gemini";
 import { knowledgeContentSchema, knowledgeJsonSchema } from "@/lib/ai/schemas/knowledge";
 import { isGeminiThinking } from "@/lib/ai/thinking";
@@ -35,7 +35,7 @@ describe.skipIf(!key)("Gemini live", () => {
         system: KNOWLEDGE_SYSTEM_PROMPT,
         user: knowledgeUserPrompt({ topic: "Kubernetes", level: "初學到中級", targetRole: "全端工程師" }),
         jsonSchema: knowledgeJsonSchema(),
-        maxOutputTokens: 8192,
+        maxOutputTokens: 12_288,
         timeoutMs: 100_000,
       });
     } catch (e) {
@@ -50,6 +50,8 @@ describe.skipIf(!key)("Gemini live", () => {
       console.log(parsed.data.name, "|", parsed.data.english_name, "|", parsed.data.category, "| sections:", parsed.data.sections.map((s) => s.title).join("、"));
       console.log("prereq:", parsed.data.prerequisites.map((p) => p.name).join("、"), "| related:", parsed.data.related_topics.map((r) => r.name).join("、"));
       console.log("mermaid:", parsed.data.architecture?.mermaid.slice(0, 160));
+      console.log("quick_take:", JSON.stringify(parsed.data.quick_take, null, 1));
+      console.log("quiz:", parsed.data.quiz.map((q) => q.question).join(" / "));
     }
   }, 120_000);
 });

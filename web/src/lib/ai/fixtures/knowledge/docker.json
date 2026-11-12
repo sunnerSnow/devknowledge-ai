@@ -4,6 +4,13 @@
   "category": "DevOps",
   "aliases": ["容器", "Container", "Docker 容器"],
   "summary": "把應用程式連同它需要的執行環境打包成映像檔（image），再以隔離的容器（container）執行的工具，讓程式在任何機器上都用同一種方式跑。",
+  "quick_take": {
+    "core": "Docker 把程式和它需要的環境打包成映像檔，在哪台機器跑結果都一樣。",
+    "analogy": "像貨櫃：不管裡面裝什麼，碼頭、船、卡車都用同一種方式搬運。映像檔是貨櫃的設計圖，容器是照設計圖裝好、正在運送的那個貨櫃。",
+    "key_numbers": null,
+    "interview_answer": "Docker 把應用程式和所有依賴打包成映像檔，開發、測試、正式環境跑的是同一份，解決「在我電腦上可以跑、上線就壞」的問題。它不是虛擬機，容器共用主機核心，所以啟動快、資源省。實務上我會用多階段建置縮小映像檔，並以非 root 使用者執行。",
+    "in_practice": "用 Dockerfile 定義環境，CI 建好映像檔推到 registry，正式環境只拉明確的版本標籤部署；出事就切回上一個標籤。"
+  },
   "why_it_matters": "「在我電腦上可以跑」的問題來自環境差異：作業系統、語言版本、系統套件。Docker 把這些都寫進 Dockerfile 並建成映像檔，開發、測試、正式環境用同一份映像檔，部署與回滾都變得可重現。它也是 Kubernetes、ECS 等容器平台的基礎。",
   "prerequisites": [
     { "name": "Linux", "reason": "容器內通常是 Linux 環境，基本指令與檔案系統概念會用到" },
@@ -68,5 +75,27 @@
   "learning_tasks": [
     { "title": "把一個 Node.js API 容器化並用 compose 接資料庫", "description": "寫多階段 Dockerfile、compose.yaml 啟動 API 與 PostgreSQL，確認重啟後資料仍在，並把映像檔大小壓到 200 MB 以下。", "estimated_minutes": 120 }
   ],
-  "caveats": ["Docker Desktop 的授權條款與各基底映像檔的版本會變動，請以官方文件為準。", "Windows 容器與 Linux 容器的行為不同，本頁以 Linux 容器為主。"]
+  "caveats": ["Docker Desktop 的授權條款與各基底映像檔的版本會變動，請以官方文件為準。", "Windows 容器與 Linux 容器的行為不同，本頁以 Linux 容器為主。"],
+  "quiz": [
+    {
+      "question": "用自己的話解釋：Docker 解決的是什麼問題？它是在「模擬」一台電腦嗎？",
+      "answer": "它解決環境不一致：把程式和依賴（語言版本、套件、系統函式庫）打包成映像檔，在任何機器都跑出一樣的結果。它不是模擬或虛擬一台電腦，容器直接共用主機的 Linux 核心，只是用 namespace 與 cgroups 把行程隔離開。",
+      "key_points": ["環境不一致", "打包程式與依賴成映像檔", "不是虛擬機，共用主機核心"]
+    },
+    {
+      "question": "映像檔（image）和容器（container）的差別是什麼？",
+      "answer": "映像檔是唯讀、分層的模板；容器是映像檔的執行實例，在映像檔上多一層可寫層。同一個映像檔可以同時跑出多個容器。",
+      "key_points": ["映像檔是唯讀模板", "容器是執行實例", "可寫層"]
+    },
+    {
+      "question": "容器刪掉後重新建立，裡面資料庫的資料不見了。原因是什麼？要怎麼避免？",
+      "answer": "資料寫在容器的可寫層，可寫層會隨容器刪除一起消失。持久資料要放在 volume（或外部資料庫），容器重建後掛回同一個 volume，資料就還在。",
+      "key_points": ["可寫層隨容器消失", "volume 持久化"]
+    },
+    {
+      "question": "一個 Node.js 應用的映像檔有 1 GB，說出兩種讓它變小的做法。",
+      "answer": "多階段建置：建置階段裝完整工具，執行階段只複製產出與正式相依；改用 alpine 或 slim 基底映像檔；用 .dockerignore 排除 node_modules、.git 等不需要的檔案；安裝時用 npm ci --omit=dev 不裝開發相依。",
+      "key_points": ["多階段建置", "較小的基底映像檔", ".dockerignore", "不裝開發相依"]
+    }
+  ]
 }

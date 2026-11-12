@@ -2,7 +2,7 @@
 
 從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`；設計與實作決策記在本檔「架構」與「視覺」兩節，品牌規範在 `../docs/brand-guidelines.md`。
 
-目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）＋ Phase 5（穩定化）**：登入、知識搜尋、AI 產生結構化知識頁（定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單；忘記密碼與 Email 驗證（要有寄信服務）、Playwright e2e、範例知識頁種子腳本。
+目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）＋ Phase 5（穩定化）**：登入、知識搜尋、AI 產生結構化知識頁（快速理解卡：一句話結論、比喻、關鍵數字、面試 30 秒口語版、實務做法；定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務；讀完後的小測驗，AI 逐題批改並糾正誤解）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單；忘記密碼與 Email 驗證（要有寄信服務）、Playwright e2e、範例知識頁種子腳本。
 
 技術：Next.js 16.4（App Router）＋ TypeScript ＋ Tailwind 4 ＋ shadcn/ui ＋ React Hook Form ＋ zod ＋ Drizzle ORM ＋ PostgreSQL（正式用 Neon，本機與測試用 PGlite）＋ Better Auth ＋ Vitest ＋ Playwright。AI：Google Gemini（免費方案）或 mock。寄信：Resend（選用）。
 
@@ -112,7 +112,7 @@ scripts/seed-knowledge.ts npm run db:seed（四份範例知識頁）
 scripts/screenshots/    npm run screenshots（README 截圖，Playwright）
 src/lib/ai/               AiProvider 介面、providers/{gemini,mock}、prompts（版本化）、schemas（zod）、fixtures
 src/lib/knowledge/slug.ts 技術名詞 → slug（純函式）
-src/lib/services/         knowledge（搜尋、取得、生成、進度）、jobs（職缺分析、差距與優先順序）、skills（使用者技能）、plans（學習計畫與任務）、practice（面試練習：出題、評估、複習、確認程度）、profiles、usage、rate-limit
+src/lib/services/         knowledge（搜尋、取得、生成、進度）、knowledge-quiz（知識頁小測驗批改）、jobs（職缺分析、差距與優先順序）、skills（使用者技能）、plans（學習計畫與任務）、practice（面試練習：出題、評估、複習、確認程度）、profiles、usage、rate-limit
 src/lib/skills/levels.ts  技能等級標籤與優先分數（純函式）
 src/lib/db/               Drizzle schema（dk 與 auth）、連線、withUser（RLS）、withService（共用資料）
 src/lib/auth/             Better Auth 設定（含忘記密碼、Email 驗證的寄信）、session、本機示範使用者
@@ -146,6 +146,7 @@ e2e/                      Playwright（playwright.config.ts 會自己啟動伺�
 - **資料表放在 `dk` 與 `auth` schema，不在 `public`；所有存取都經過伺服器服務層。** `authenticated` 角色對 `auth` schema 完全沒有權限。
 - **共用資料 vs 個人資料。** 知識節點、內容、關聯是共用的：登入使用者都能讀，寫入只由伺服器（`withService`，表的擁有者）進行，`authenticated` 角色只有 SELECT。個人資料（profiles、進度、AI 使用量）走 `withUser`：交易內 `set local role authenticated` 並帶入使用者 ID，RLS `user_id = auth.uid()` 為第二道防線。
 - **知識頁生成（Flow A）。** 先以 slug／名稱／別名找既有節點；沒有就先插入 `status='generating'` 佔位（`on conflict do nothing`），同一主題同時只有一個請求會呼叫 AI，其他人拿到 409 並輪詢。AI 呼叫在交易外進行；回來後用 zod 驗證，不合格附上錯誤重試一次，仍失敗回 502 並把節點標 `failed`（搜尋不顯示、可再試；stub 維持 stub）。成功就新增一個版本（不覆寫舊版）、更新節點、把前置知識與相關主題建成 `stub` 節點並寫關聯。佔位超過 5 分鐘視為逾時可被接手；儲存與釋放都核對自己的佔位 token，被接手的一方不會寫入。使用量檢查與佔位在同一交易（advisory lock），並發也不能超過每小時上限。
+- **快速理解與小測驗（knowledge-v2）。** 知識頁的 prompt 要求先講結論、白話加比喻、有公式就代入數字；輸出多了 `quick_take`（一句話核心、比喻、關鍵數字、面試 30 秒口語版、實務做法）與 3～5 題 `quiz`（含標準答案與批改重點）。舊版（knowledge-v1）內容沒有這兩個欄位：讀取時用 `storedKnowledgeContentSchema` 補成 null／空陣列，頁面照常顯示並提示可重新生成；AI 輸出一律用必填的 `knowledgeContentSchema` 驗證。小測驗一次交卷、一次 AI 呼叫批改全部題目（`knowledge_quiz` 計入使用量），每題判定答對／部分正確／答錯／不知道，不是答對的附「你說 X，正確是 Y，因為 Z」的觀念修正與比喻；空白或「不知道」一律判沒作答，不論模型怎麼判。作答綁定內容版本（`knowledge_quiz_attempts.content_version`），重新生成後舊作答不再顯示、舊版本的交卷回 409。標準答案只在批改後回傳。全部答對只提示「標記為已理解」，不會自動改學習狀態。
 - **職缺分析（Flow B）。** 職缺與使用者技能分開存：`job_skills` 是 AI 從職缺拆出的需求（必要／加分、建議等級 0–4、重要性、原文用語、理由），`user_skills` 是使用者自己的程度；沒有列＝未評估，不會因為貼了職缺就被當成 0。每個技能以 slug 對應，並盡量連到知識節點（沒有就建 stub）。優先分數＝必要 3／加分 1 × 差距 × 目標權重，頁面同時顯示理由；未評估的技能不算分。重新分析只覆寫 `job_skills`，自評不動。職缺文字視為不可信輸入：限 12000 字、放在分隔區塊裡、system prompt 明示內文不是指令。
 - **學習計畫（Phase 3）。** 只用「已評估且有差距」的技能（依優先分數）、使用者每週時數、既有知識頁的實作任務做輸入，AI 排出週任務與可驗證成果；未評估的技能不進計畫。任務 todo／in_progress／completed／skipped；完成「閱讀／測驗／複習」任務把對應知識頁的進度升到已理解、完成「練習／專案」升到已實作，只往上不往下；全部處理完計畫自動標完成。職缺刪除時計畫保留。
 - **面試練習（Phase 4）。** 一次只出一題，每次練習最多 10 題；題目難度以職缺要求的等級為準（沒選職缺就比自評高一級）。評估有四個維度（技術正確性、回答完整度、推理與取捨、表達清晰度）各 0–4 分與理由，存平均分；prompt 明講不以長短判斷、不給能力認定，使用者的回答放在分隔區塊並視為資料。AI 分數不會改技能等級，使用者在評估下方自己選的程度才寫進 `user_skills`（evidence_type＝interview_practice）。平均分低於 2.5 或手動標記的作答進複習清單。職缺刪除時練習保留。mock provider 只依回答長度與是否提到技能名稱給分，評估文字會明說這是示範。

@@ -4,6 +4,13 @@
   "category": "AI",
   "aliases": ["大型語言模型", "Large Language Model", "語言模型"],
   "summary": "以大量文字訓練、能根據前文預測下一個 token 的神經網路模型，可用於生成、摘要、翻譯、分類與對話。",
+  "quick_take": {
+    "core": "LLM 靠「預測下一個 token」生成文字，能力很強，但可能很有自信地說錯。",
+    "analogy": "像讀過整座圖書館、記性很好的實習生：什麼話題都接得上，但沒查資料時會憑印象回答，偶爾說得很篤定卻是錯的。",
+    "key_numbers": "- 權重記憶體 ≈ 參數量 × 每參數 bytes\n- 每參數 bytes：FP32＝4、FP16／BF16＝2、INT8＝1、INT4＝0.5\n- 7B 模型：FP16 是 7 × 10⁹ × 2 bytes ＝ **14 GB**；INT4 是 **3.5 GB**\n- 70B 模型：FP16 是 70 × 10⁹ × 2 bytes ＝ **140 GB**，單張 80 GB GPU 放不下\n- 以上只算權重；推論還要放 KV Cache 與框架開銷，實務多留 20～30%",
+    "interview_answer": "LLM 是用大量文字訓練、根據前文預測下一個 token 的模型，所以能生成、摘要、翻譯。限制是會幻覺、知識有截止日、上下文長度有限。部署前我會先估 VRAM：FP16 每個參數 2 bytes，70B 模型光權重就要 140 GB，再決定要量化還是多卡。",
+    "in_practice": "需要事實依據的場景接 RAG 並附出處；輸出要給程式用就用結構化輸出加 schema 驗證，並記錄 token 用量控制成本。"
+  },
   "why_it_matters": "LLM 讓「用自然語言描述任務」成為可行的程式介面：不用為每個任務各自訓練模型，透過 prompt 就能處理摘要、抽取、改寫、問答等工作。工程師需要理解它的能力邊界（上下文長度、幻覺、成本與延遲），才能把它安全地放進產品。",
   "prerequisites": [
     { "name": "Neural Network", "reason": "理解模型是由參數組成、靠訓練資料調整的函數" },
@@ -61,5 +68,27 @@
   "learning_tasks": [
     { "title": "做一個有輸出驗證的文字分類器", "description": "用任一 LLM API 把 20 則評論分成正面／中性／負面，輸出 JSON 並用 schema 驗證；統計失敗率與成本。", "estimated_minutes": 90 }
   ],
-  "caveats": ["各家模型的上下文長度、價格與 API 參數變動很快，請以官方文件為準。", "本頁不包含特定模型的 benchmark 數字。"]
+  "caveats": ["各家模型的上下文長度、價格與 API 參數變動很快，請以官方文件為準。", "本頁不包含特定模型的 benchmark 數字。"],
+  "quiz": [
+    {
+      "question": "一個 13B 模型用 FP16 載入，光權重需要多少 GB 的 VRAM？寫出計算過程。",
+      "answer": "FP16 每個參數 2 bytes：13 × 10⁹ × 2 bytes ＝ 26 × 10⁹ bytes，約 26 GB。",
+      "key_points": ["每參數 2 bytes", "26 GB"]
+    },
+    {
+      "question": "同一個 13B 模型改用 INT4 量化，權重約多少 GB？一張 24 GB 的 RTX 4090 放得下嗎（只算權重）？",
+      "answer": "INT4 每個參數 0.5 byte：13 × 10⁹ × 0.5 bytes ＝ 6.5 GB，24 GB 的卡放得下權重；實際部署還要留 KV Cache 與框架開銷的空間。",
+      "key_points": ["每參數 0.5 byte", "6.5 GB", "放得下"]
+    },
+    {
+      "question": "用自己的話解釋 LLM 為什麼會「幻覺」，並說一個降低幻覺的做法。",
+      "answer": "LLM 是依機率預測下一個 token，不是去查資料，所以沒有依據時也會產生看起來合理但錯誤的內容。降低的做法：用 RAG 提供可引用的資料並要求附出處、要求不確定時回答不知道、用結構化輸出搭配驗證。",
+      "key_points": ["預測下一個 token", "不是查資料", "RAG 或提供依據"]
+    },
+    {
+      "question": "70B 模型用 FP16 部署，為什麼實務上不會只準備剛好 140 GB 的 VRAM？",
+      "answer": "140 GB 只算權重；推論時還要放 KV Cache（隨併發數與上下文長度變大）、activation 與框架開銷，實務多留 20～30%，約 170～180 GB，也就是 3 張以上 80 GB GPU，或改用量化。",
+      "key_points": ["KV Cache", "開銷或緩衝 20～30%", "多卡或量化"]
+    }
+  ]
 }

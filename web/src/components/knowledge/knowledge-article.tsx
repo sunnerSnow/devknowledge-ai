@@ -8,10 +8,13 @@ export interface ArticleSection {
   title: string;
 }
 
-/** 依規格 4.4 的 10 個內容區塊組出章節；沒有內容的區塊不顯示 */
+/**
+ * 依規格 4.4 的內容區塊組出章節；沒有內容的區塊不顯示。
+ * knowledge-v2 起第一節是「快速理解」（結論、比喻、數字、面試口語版、實務做法），取代舊版的「一句話理解」；最後一節是小測驗。
+ */
 export function articleSections(content: KnowledgeContent): ArticleSection[] {
   const sections: ArticleSection[] = [
-    { id: "summary", title: "一句話理解" },
+    content.quick_take ? { id: "quick", title: "快速理解" } : { id: "summary", title: "一句話理解" },
     { id: "why", title: "為什麼需要它" },
     ...content.sections.map((s, i) => ({ id: `section-${i}`, title: s.title })),
   ];
@@ -22,18 +25,26 @@ export function articleSections(content: KnowledgeContent): ArticleSection[] {
   if (content.interview_topics.length) sections.push({ id: "interview", title: "面試重點" });
   if (content.learning_tasks.length) sections.push({ id: "tasks", title: "實作任務" });
   if (content.caveats.length) sections.push({ id: "caveats", title: "注意事項" });
+  if (content.quiz.length) sections.push({ id: "quiz", title: "小測驗" });
   return sections;
 }
 
-export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
+/** quiz：小測驗的互動元件（需要使用者與內容版本，由頁面組好傳進來） */
+export function KnowledgeArticle({ content, quiz }: { content: KnowledgeContent; quiz?: React.ReactNode }) {
   const sections = articleSections(content);
   const num = (id: string) => String(sections.findIndex((s) => s.id === id) + 1).padStart(2, "0");
 
   return (
     <article className="grid gap-14">
-      <Section id="summary" num={num("summary")} title="一句話理解">
-        <p className="text-xl leading-9 font-medium tracking-[0.02em]">{content.summary}</p>
-      </Section>
+      {content.quick_take ? (
+        <Section id="quick" num={num("quick")} title="快速理解">
+          <QuickTakeCard quickTake={content.quick_take} />
+        </Section>
+      ) : (
+        <Section id="summary" num={num("summary")} title="一句話理解">
+          <p className="text-xl leading-9 font-medium tracking-[0.02em]">{content.summary}</p>
+        </Section>
+      )}
 
       <Section id="why" num={num("why")} title="為什麼需要它">
         <Markdown content={content.why_it_matters} />
@@ -150,7 +161,47 @@ export function KnowledgeArticle({ content }: { content: KnowledgeContent }) {
           </ul>
         </Section>
       ) : null}
+
+      {content.quiz.length && quiz ? (
+        <Section id="quiz" num={num("quiz")} title="小測驗">
+          {quiz}
+        </Section>
+      ) : null}
     </article>
+  );
+}
+
+/** 快速理解：第一句就是結論，其餘每項一兩句 */
+function QuickTakeCard({ quickTake }: { quickTake: NonNullable<KnowledgeContent["quick_take"]> }) {
+  return (
+    <div className="grid gap-6">
+      <p className="text-xl leading-9 font-medium tracking-[0.02em]">{quickTake.core}</p>
+      <dl className="grid gap-5">
+        <QuickRow label="白話比喻">
+          <p className="text-[15px] leading-8 tracking-[0.04em]">{quickTake.analogy}</p>
+        </QuickRow>
+        {quickTake.key_numbers ? (
+          <QuickRow label="關鍵數字">
+            <Markdown content={quickTake.key_numbers} />
+          </QuickRow>
+        ) : null}
+        <QuickRow label="面試 30 秒怎麼答">
+          <blockquote className="border-l-2 border-primary bg-secondary/60 px-5 py-4 text-[15px] leading-8 tracking-[0.04em]">{quickTake.interview_answer}</blockquote>
+        </QuickRow>
+        <QuickRow label="實務上會怎麼做">
+          <p className="text-[15px] leading-8 tracking-[0.04em]">{quickTake.in_practice}</p>
+        </QuickRow>
+      </dl>
+    </div>
+  );
+}
+
+function QuickRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-6">
+      <dt className="pt-1 text-xs tracking-[0.16em] text-primary">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
+    </div>
   );
 }
 

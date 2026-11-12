@@ -33,6 +33,8 @@ test.describe("職缺分析與學習計畫（Flow B、Phase 3）", () => {
     await page.waitForURL(/\/plans\/[0-9a-f-]{36}$/);
     await expect(page.getByText("學習計畫").first()).toBeVisible();
     const startButtons = page.getByRole("button", { name: "開始" });
+    // 網址先變、內容後到（loading.tsx 的骨架）；等第一個按鈕出現再數，count() 本身不會等
+    await expect(startButtons.first()).toBeVisible();
     const todoCount = await startButtons.count();
     expect(todoCount).toBeGreaterThan(0);
     await startButtons.first().click();

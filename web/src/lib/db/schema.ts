@@ -20,7 +20,7 @@ export type RelationType = (typeof RELATION_TYPES)[number];
 export const PROGRESS_STATUSES = ["not_started", "learning", "understood", "implemented"] as const;
 export type ProgressStatus = (typeof PROGRESS_STATUSES)[number];
 
-export const AI_USAGE_KINDS = ["knowledge_generate", "job_analyze", "learning_plan", "practice_question", "practice_evaluate"] as const;
+export const AI_USAGE_KINDS = ["knowledge_generate", "knowledge_quiz", "job_analyze", "learning_plan", "practice_question", "practice_evaluate"] as const;
 export type AiUsageKind = (typeof AI_USAGE_KINDS)[number];
 
 export const profiles = dk.table("profiles", {
@@ -79,6 +79,23 @@ export const userKnowledgeProgress = dk.table("user_knowledge_progress", {
   confidence: integer("confidence"),
   lastViewedAt: timestamp("last_viewed_at", { withTimezone: true, mode: "string" }),
   updatedAt: updatedAt(),
+});
+
+/** 知識頁小測驗的作答與批改；content_version 對應當時的 knowledge_contents.version，重新生成後舊作答不再顯示 */
+export const knowledgeQuizAttempts = dk.table("knowledge_quiz_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id").notNull(),
+  contentVersion: integer("content_version").notNull(),
+  answers: jsonb("answers").$type<string[]>().notNull(),
+  result: jsonb("result").notNull(),
+  correctCount: integer("correct_count").notNull(),
+  totalCount: integer("total_count").notNull(),
+  passed: boolean("passed").notNull(),
+  provider: text("provider"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  createdAt: createdAt(),
 });
 
 export const aiUsage = dk.table("ai_usage", {
@@ -267,6 +284,7 @@ export const schema = {
   knowledgeContents,
   knowledgeRelations,
   userKnowledgeProgress,
+  knowledgeQuizAttempts,
   aiUsage,
   jobPostings,
   jobSkills,

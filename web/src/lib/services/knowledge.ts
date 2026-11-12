@@ -1,8 +1,14 @@
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { KNOWLEDGE_PROMPT_VERSION, KNOWLEDGE_SYSTEM_PROMPT, knowledgeRetryPrompt, knowledgeUserPrompt } from "@/lib/ai/prompts/knowledge-v1";
+import { KNOWLEDGE_PROMPT_VERSION, KNOWLEDGE_SYSTEM_PROMPT, knowledgeRetryPrompt, knowledgeUserPrompt } from "@/lib/ai/prompts/knowledge-v2";
 import { type AiProvider, AiOutputError, AiUnavailableError } from "@/lib/ai/provider";
-import { type KnowledgeContent, knowledgeContentSchema, knowledgeJsonSchema } from "@/lib/ai/schemas/knowledge";
+import {
+  type GeneratedKnowledgeContent,
+  type KnowledgeContent,
+  knowledgeContentSchema,
+  knowledgeJsonSchema,
+  storedKnowledgeContentSchema,
+} from "@/lib/ai/schemas/knowledge";
 import { AI_TOTAL_BUDGET_MS, generateValidated as generateStructuredValidated } from "@/lib/ai/structured";
 import type { Db } from "@/lib/db/local";
 import {
@@ -69,6 +75,8 @@ const TOTAL_BUDGET_MS = AI_TOTAL_BUDGET_MS;
  * 必須明顯大於最壞耗時（TOTAL_BUDGET_MS 加上資料庫往返），否則同一主題會被兩個請求同時生成。
  */
 const STALE_MINUTES = 5;
+/** 知識頁生成的輸出上限（其他 AI 呼叫預設 8192） */
+const KNOWLEDGE_MAX_OUTPUT_TOKENS = 12_288;
 
 // ---------------------------------------------------------------------------
 // 輸入驗證
@@ -244,7 +252,7 @@ export async function getKnowledge(db: Db, userId: string, slugOrId: string): Pr
       .where(and(eq(knowledgeRelations.toNodeId, row.id), eq(knowledgeRelations.relationType, "prerequisite")))
       .orderBy(knowledgeNodes.name);
 
-    const content = latest ? knowledgeContentSchema.safeParse(latest.content) : null;
+    const content = latest ? storedKnowledgeContentSchema.safeParse(latest.content) : null;
     const relNode = (r: (typeof outgoing)[number] | (typeof neededBy)[number]) => ({
       id: r.id,
       slug: r.slug,
@@ -480,13 +488,15 @@ async function generateValidated(
   provider: AiProvider,
   topic: string,
   targetRole: string | null,
-): Promise<{ content: KnowledgeContent; model: string; tokens: { inputTokens: number | null; outputTokens: number | null } }> {
+): Promise<{ content: GeneratedKnowledgeContent; model: string; tokens: { inputTokens: number | null; outputTokens: number | null } }> {
   const outcome = await generateStructuredValidated(provider, {
     system: KNOWLEDGE_SYSTEM_PROMPT,
     user: knowledgeUserPrompt({ topic, level: "初學到中級", targetRole: targetRole || "全端工程師" }),
     schema: knowledgeContentSchema,
     jsonSchema: knowledgeJsonSchema(),
     retryPrompt: knowledgeRetryPrompt,
+    // knowledge-v2 多了快速理解與小測驗，輸出比 v1 長；思考用的 token 也算在這個上限裡
+    maxOutputTokens: KNOWLEDGE_MAX_OUTPUT_TOKENS,
     budgetMs: TOTAL_BUDGET_MS,
     hint: topic,
     kind: "knowledge",
@@ -496,7 +506,7 @@ async function generateValidated(
 
 async function saveGenerated(
   tx: Tx,
-  args: { nodeId: string; token: string; slug: string; topic: string; userId: string; content: KnowledgeContent; providerName: string; modelName: string },
+  args: { nodeId: string; token: string; slug: string; topic: string; userId: string; content: GeneratedKnowledgeContent; providerName: string; modelName: string },
 ): Promise<void> {
   const { nodeId, token, slug, topic, userId, content, providerName, modelName } = args;
 

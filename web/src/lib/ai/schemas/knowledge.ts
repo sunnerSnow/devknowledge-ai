@@ -13,12 +13,34 @@ export const MERMAID_RE = /^\s*(flowchart|graph|sequenceDiagram|classDiagram|sta
 
 const shortText = (max: number) => z.string().trim().min(1).max(max);
 
+/** 快速理解：先給結論、白話比喻、代入數字、面試口語版、實務做法（knowledge-v2 起才有） */
+export const quickTakeSchema = z.object({
+  core: shortText(120).describe("一句話核心：第一句就是結論（它是什麼＋為什麼要懂），20～40 字"),
+  analogy: shortText(300).describe("一個生活比喻，程式小白也能懂"),
+  key_numbers: z.string().trim().max(1500).nullable().describe("關鍵數字或公式，代入實際數字並寫清楚單位（Markdown）；主題沒有可計算的數字就 null"),
+  interview_answer: shortText(400).describe("面試 30 秒口語版：3 句內、可以直接說出口"),
+  in_practice: shortText(300).describe("實務上工程師會怎麼做，1～2 句"),
+});
+export type QuickTake = z.infer<typeof quickTakeSchema>;
+
+/** 小測驗的一題；answer 與 key_points 只在作答後顯示，也用來批改 */
+export const quizQuestionSchema = z.object({
+  question: shortText(300).describe("題目；計算題要給齊數字"),
+  answer: shortText(600).describe("標準答案；計算題寫出計算過程"),
+  key_points: z.array(shortText(120)).min(1).max(4).describe("批改時對照的重點"),
+});
+export type QuizQuestion = z.infer<typeof quizQuestionSchema>;
+
+export const QUIZ_MIN_QUESTIONS = 3;
+export const QUIZ_MAX_QUESTIONS = 5;
+
 export const knowledgeContentSchema = z.object({
   name: shortText(120).describe("技術名稱（常用簡稱，例如 RAG、Docker）"),
   english_name: z.string().trim().max(160).nullable().describe("英文全名；沒有就 null"),
   category: z.enum(KNOWLEDGE_CATEGORIES),
   aliases: z.array(shortText(60)).max(10).describe("別名與中文譯名，方便搜尋"),
   summary: shortText(500).describe("一句話理解"),
+  quick_take: quickTakeSchema,
   why_it_matters: shortText(1500).describe("為什麼需要它"),
   prerequisites: z.array(z.object({ name: shortText(80), reason: shortText(300) })).max(8),
   sections: z
@@ -54,9 +76,22 @@ export const knowledgeContentSchema = z.object({
   related_topics: z.array(z.object({ name: shortText(80), relation: z.enum(["related", "extension", "alternative"]) })).max(10),
   learning_tasks: z.array(z.object({ title: shortText(120), description: shortText(600), estimated_minutes: z.number().int().min(5).max(600) })).max(4),
   caveats: z.array(shortText(300)).max(6).describe("可能隨版本變動或不確定的內容"),
+  quiz: z.array(quizQuestionSchema).min(QUIZ_MIN_QUESTIONS).max(QUIZ_MAX_QUESTIONS).describe("讀完後的小測驗，3～5 題，由淺到深"),
 });
 
-export type KnowledgeContent = z.infer<typeof knowledgeContentSchema>;
+/** AI 生成時的輸出（新欄位都必填） */
+export type GeneratedKnowledgeContent = z.infer<typeof knowledgeContentSchema>;
+
+/**
+ * 讀取已儲存的內容：knowledge-v1 時期的內容沒有 quick_take／quiz，補成 null／空陣列，舊頁面照常顯示。
+ * 生成與驗證 AI 輸出一律用 knowledgeContentSchema；讀資料庫一律用這份。
+ */
+export const storedKnowledgeContentSchema = knowledgeContentSchema.extend({
+  quick_take: quickTakeSchema.nullable().default(null),
+  quiz: z.array(quizQuestionSchema).max(QUIZ_MAX_QUESTIONS).default([]),
+});
+
+export type KnowledgeContent = z.infer<typeof storedKnowledgeContentSchema>;
 
 /** 給 provider 的 JSON Schema（去掉 $schema；nullable 的 anyOf 改成 type 陣列，Gemini 比較穩） */
 export function knowledgeJsonSchema(): Record<string, unknown> {

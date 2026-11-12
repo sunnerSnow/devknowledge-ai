@@ -32,7 +32,7 @@ test("拍 README 的畫面", async ({ page }) => {
   await ensureKnowledgePage(page, "RAG", "rag");
   await ensureKnowledgePage(page, "Docker", "docker");
   await page.goto("/knowledge/rag");
-  await expect(page.getByRole("heading", { name: "一句話理解" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "快速理解" })).toBeVisible();
   await shot(page, "knowledge");
 
   // 職缺分析 → 自評 → 差距表

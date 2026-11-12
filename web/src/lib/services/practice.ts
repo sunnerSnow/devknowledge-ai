@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   EVALUATION_SYSTEM_PROMPT,
@@ -9,7 +9,7 @@ import {
   questionUserPrompt,
 } from "@/lib/ai/prompts/practice-v1";
 import type { AiProvider } from "@/lib/ai/provider";
-import { knowledgeContentSchema } from "@/lib/ai/schemas/knowledge";
+import { storedKnowledgeContentSchema } from "@/lib/ai/schemas/knowledge";
 import {
   averageScore,
   type PracticeEvaluationOutput,
@@ -22,8 +22,6 @@ import { generateValidated } from "@/lib/ai/structured";
 import { logError } from "@/lib/api/http";
 import type { Db } from "@/lib/db/local";
 import {
-  type AiUsageKind,
-  aiUsage,
   jobPostings,
   knowledgeContents,
   knowledgeNodes,
@@ -49,6 +47,7 @@ import { getJob } from "@/lib/services/jobs";
 import { findNodeByTopic } from "@/lib/services/knowledge";
 import { getUserSkillMap, upsertUserSkill } from "@/lib/services/skills";
 import {
+  assertNoInflight,
   assertUsageWithinLimit,
   finishUsage,
   startUsage,
@@ -203,27 +202,6 @@ export const attemptPatchSchema = z
 // ---------------------------------------------------------------------------
 // 並發保護
 // ---------------------------------------------------------------------------
-
-/** 同一使用者同一種練習呼叫還在進行中（最近 2 分鐘內 started 未結束）就擋下，避免連點各自花一次 AI 額度 */
-async function assertNoInflight(
-  tx: Tx,
-  userId: string,
-  kind: AiUsageKind,
-  message: string,
-): Promise<void> {
-  const [row] = await tx
-    .select({ n: sql<number>`count(*)::int` })
-    .from(aiUsage)
-    .where(
-      and(
-        eq(aiUsage.userId, userId),
-        eq(aiUsage.kind, kind),
-        eq(aiUsage.status, "started"),
-        gt(aiUsage.createdAt, sql`now() - interval '2 minutes'`),
-      ),
-    );
-  if ((row?.n ?? 0) > 0) throw new AppError("in_progress", message, 409);
-}
 
 /** Postgres 唯一鍵衝突（23505） */
 function isUniqueViolation(error: unknown): boolean {
@@ -557,7 +535,7 @@ async function loadInterviewTopics(db: Db, nodeId: string): Promise<string[]> {
       .limit(1),
   );
   if (!row) return [];
-  const parsed = knowledgeContentSchema.safeParse(row.content);
+  const parsed = storedKnowledgeContentSchema.safeParse(row.content);
   return parsed.success
     ? parsed.data.interview_topics.map((t) => t.question).slice(0, 6)
     : [];

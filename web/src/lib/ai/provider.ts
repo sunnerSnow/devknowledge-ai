@@ -11,7 +11,7 @@ export interface StructuredRequest {
   /** 給 mock provider 用的主題提示；真正的 provider 不使用 */
   hint?: string;
   /** 給 mock provider 分辨要回哪種範例；真正的 provider 不使用 */
-  kind?: "knowledge" | "job" | "plan" | "practice_question" | "practice_evaluate";
+  kind?: "knowledge" | "knowledge_quiz" | "job" | "plan" | "practice_question" | "practice_evaluate";
 }
 
 export interface StructuredResult {
