@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AiProvider } from "@/lib/ai/provider";
 import { createMockProvider } from "@/lib/ai/providers/mock";
 import type { RoutePlanOutput } from "@/lib/ai/schemas/route";
 import type { Db } from "@/lib/db/local";
@@ -19,6 +20,7 @@ import {
   normalizePlan,
   pickRouteSkills,
   planLessons,
+  ROUTE_STEP_ERROR_MESSAGES,
   type RouteSkill,
   setRouteArchived,
 } from "@/lib/services/routes";
@@ -127,6 +129,29 @@ describe("學習路線：建立與診斷", () => {
     await expectAppError(createRouteForJob(db, alice, jobId, { days: 0, dailyMinutes: 90 }, deps), 400, "validation_failed");
     await expectAppError(createRouteForJob(db, alice, jobId, { days: 31, dailyMinutes: 90 }, deps), 400, "validation_failed");
     await expectAppError(createRouteForJob(db, alice, jobId, { days: 3, dailyMinutes: 10 }, deps), 400, "validation_failed");
+  });
+
+  it("AI 步驟發生非預期錯誤：不丟例外，路線留在待開始並回 internal_error；使用量記成失敗，再按一次就能繼續", async () => {
+    const broken: AiProvider = {
+      name: mock.name,
+      model: mock.model,
+      generateStructured: () => Promise.reject(new Error("socket hang up")),
+    };
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { route, stepError } = await createRouteForJob(db, alice, jobId, { days: 3, dailyMinutes: 90 }, { ...deps, provider: broken });
+      expect(stepError).toEqual({ code: "internal_error", message: ROUTE_STEP_ERROR_MESSAGES.internal_error });
+      expect(route.stage).toBe("setup");
+      expect(logged).toHaveBeenCalledWith(expect.stringContaining("socket hang up"));
+    } finally {
+      logged.mockRestore();
+    }
+
+    const usage = rowsOf<{ kind: string; status: string }>(await db.execute(sql`select kind, status from dk.ai_usage where kind like 'route%'`));
+    expect(usage).toEqual([{ kind: "route_diagnose", status: "failed" }]);
+    const [route] = await listRoutes(db, alice);
+    await generateDiagnosis(db, alice, route.id, deps);
+    expect((await getRoute(db, alice, route.id)).stage).toBe("diagnosis");
   });
 
   it("診斷作答：題數不符、全部空白擋下，且不花 AI 額度", async () => {

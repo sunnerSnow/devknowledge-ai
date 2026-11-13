@@ -22,6 +22,7 @@ import {
   routePlanSchema,
 } from "@/lib/ai/schemas/route";
 import { generateValidated, type StructuredOutcome } from "@/lib/ai/structured";
+import { logError } from "@/lib/api/http";
 import type { Db } from "@/lib/db/local";
 import {
   type AiUsageKind,
@@ -262,8 +263,11 @@ async function captureStepError(step: () => Promise<unknown>): Promise<RouteStep
     await step();
     return null;
   } catch (error) {
+    // 路線已經建立：不論是可預期的失敗還是其他錯誤，都回給使用者讓他在路線頁再按一次；
+    // 丟 500 的話使用者看不到已建好的路線，重送表單會再建一條重複的
     if (error instanceof AppError) return { code: error.code, message: error.message };
-    throw error;
+    logError(error);
+    return { code: "internal_error", message: ROUTE_STEP_ERROR_MESSAGES.internal_error };
   }
 }
 
