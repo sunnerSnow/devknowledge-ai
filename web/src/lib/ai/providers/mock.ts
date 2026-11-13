@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AiProvider, StructuredRequest, StructuredResult } from "@/lib/ai/provider";
 import type { PlanGapInput } from "@/lib/ai/prompts/plan-v1";
+import type { RouteSkillInput } from "@/lib/ai/prompts/route-v1";
+import type { RouteDiagnosisOutput, RoutePlanOutput } from "@/lib/ai/schemas/route";
 import type { JobAnalysis } from "@/lib/ai/schemas/job";
 import type { GeneratedKnowledgeContent } from "@/lib/ai/schemas/knowledge";
 import type { QuizGradeOutput, QuizVerdict } from "@/lib/ai/schemas/knowledge-quiz";
@@ -51,6 +53,12 @@ export function createMockProvider(options: { delayMs?: number } = {}): AiProvid
       }
       if (request.kind === "knowledge_quiz") {
         return { text: JSON.stringify(mockQuizGrade(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
+      }
+      if (request.kind === "route_diagnose") {
+        return { text: JSON.stringify(mockRouteDiagnosis(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
+      }
+      if (request.kind === "route_plan") {
+        return { text: JSON.stringify(mockRoutePlan(request.user)), model: "mock-rules", inputTokens: null, outputTokens: null };
       }
       const topic = (request.hint ?? "").trim() || "未命名技術";
       const key = FIXTURES[normalizeSlug(topic)];
@@ -332,6 +340,83 @@ export function mockQuizGrade(userPrompt: string): QuizGradeOutput {
   return {
     results,
     summary: `（mock）${results.length} 題答對 ${passed} 題。這是 mock provider 依關鍵詞比對的示範批改，不代表真實理解程度；設定 AI_PROVIDER=gemini 後會逐題理解你的回答。`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 學習路線的 mock
+// ---------------------------------------------------------------------------
+
+function parseRouteSkills(userPrompt: string): RouteSkillInput[] {
+  try {
+    return JSON.parse(block(userPrompt, "技能清單") || "[]") as RouteSkillInput[];
+  } catch {
+    return [];
+  }
+}
+
+/** 診斷題的 mock：前 5 個技能各一題「說明它是什麼」，批改重點就是技能名稱；技能少於 3 個就重複出深一點的題目 */
+export function mockRouteDiagnosis(userPrompt: string): RouteDiagnosisOutput {
+  const skills = parseRouteSkills(userPrompt).map((s) => s.skill);
+  const names = skills.length ? skills : ["這個職缺的核心技術"];
+  const count = Math.min(5, Math.max(3, names.length));
+  return {
+    questions: Array.from({ length: count }, (_, i) => {
+      const skill = names[i % names.length];
+      const deeper = i >= names.length;
+      return {
+        skill,
+        question: deeper ? `（mock）${skill} 在正式環境最常遇到什麼問題？你會怎麼處理？` : `（mock）用一兩句話說明 ${skill} 是什麼、解決什麼問題。`,
+        answer: `（mock 標準答案）${skill} 的定義、要解決的問題與一個使用情境。設定 AI_PROVIDER=gemini 會得到真正的診斷題。`,
+        key_points: [skill],
+      };
+    }),
+  };
+}
+
+/**
+ * 排課的 mock：每個技能一課、主題就是技能名稱（mock fixtures 有 RAG／LLM／AWS／Docker 的範例頁），
+ * 診斷「掌握基礎」的技能略過；每課 45 分鐘（每天時數更少就用每天時數），依天數裝箱，裝不下的省略。
+ */
+export function mockRoutePlan(userPrompt: string): RoutePlanOutput {
+  const days = Number(/可用天數：(\d+)/.exec(userPrompt)?.[1] ?? 7);
+  const daily = Number(/每天可投入：(\d+)/.exec(userPrompt)?.[1] ?? 90);
+  const jobTitle = block(userPrompt, "職缺") || "職缺";
+  const skills = parseRouteSkills(userPrompt);
+  const todo = skills.filter((s) => s.diagnosis !== "掌握基礎");
+  const minutes = Math.max(10, Math.min(45, daily));
+  const plan: RoutePlanOutput["days"] = [];
+  let skipped = 0;
+  for (const s of todo) {
+    let day = plan[plan.length - 1];
+    const used = day ? day.lessons.reduce((n, l) => n + l.estimated_minutes, 0) : Infinity;
+    if (!day || used + minutes > daily || day.lessons.length >= 4) {
+      if (plan.length >= days) {
+        skipped++;
+        continue;
+      }
+      day = { day: plan.length + 1, focus: "", lessons: [] };
+      plan.push(day);
+    }
+    day.lessons.push({
+      topic: s.skill,
+      skill: s.skill,
+      goal: `（mock）能用自己的話說明 ${s.skill} 並通過小測驗。`,
+      estimated_minutes: minutes,
+      core: s.requirement === "required",
+    });
+  }
+  for (const d of plan) d.focus = d.lessons.map((l) => l.topic).join("、");
+  if (!plan.length) {
+    plan.push({ day: 1, focus: "複習", lessons: [{ topic: skills[0]?.skill ?? "Git", skill: skills[0]?.skill ?? "Git", goal: "（mock）複習已掌握的技能。", estimated_minutes: minutes, core: true }] });
+  }
+  const notes = ["mock provider 依規則排課：每個技能一課、主題就是技能名稱；設定 AI_PROVIDER=gemini 會把技能拆成更細的主題。"];
+  if (skipped) notes.push(`天數不夠，省略了 ${skipped} 個技能。`);
+  return {
+    title: `${jobTitle} 學習路線`,
+    summary: `（mock）依技能順序每天排 ${Math.max(1, Math.floor(daily / minutes))} 課以內，診斷已掌握基礎的技能先略過。`,
+    days: plan,
+    notes,
   };
 }
 

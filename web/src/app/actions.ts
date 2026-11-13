@@ -16,6 +16,7 @@ import { markViewed, setProgress } from "@/lib/services/knowledge";
 import { deletePlan, setPlanStatus, setTaskStatus } from "@/lib/services/plans";
 import { deleteSession, endSession, updateAttempt } from "@/lib/services/practice";
 import { updateProfile } from "@/lib/services/profiles";
+import { deleteRoute, setRouteArchived } from "@/lib/services/routes";
 import { deleteUserSkill, upsertUserSkill } from "@/lib/services/skills";
 import { clientIp, consumeRateLimit } from "@/lib/services/rate-limit";
 import { type Credentials, credentialsSchema, type ForgotPasswordInput, forgotPasswordSchema, type ResetPasswordInput, resetPasswordSchema } from "@/lib/validation/auth";
@@ -332,6 +333,33 @@ export async function deletePlanAction(planId: string): Promise<void> {
   revalidatePath("/plans");
   revalidatePath("/");
   redirect("/plans");
+}
+
+// ---------------------------------------------------------------------------
+// 學習路線（AI 的步驟走 API 路由，這裡只有封存與刪除）
+// ---------------------------------------------------------------------------
+
+export async function setRouteArchivedAction(routeId: string, archived: boolean): Promise<ActionState> {
+  const user = await sessionOrRedirect();
+  try {
+    await setRouteArchived(await getDb(), user.id, routeId, archived === true);
+  } catch (error) {
+    return toActionState(error);
+  }
+  revalidatePath(`/routes/${routeId}`);
+  revalidatePath("/routes");
+  return { done: true };
+}
+
+export async function deleteRouteAction(routeId: string): Promise<void> {
+  const user = await sessionOrRedirect();
+  try {
+    await deleteRoute(await getDb(), user.id, routeId);
+  } catch (error) {
+    if (!(error instanceof AppError)) logError(error);
+  }
+  revalidatePath("/routes");
+  redirect("/routes");
 }
 
 // ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ export function GenerateButton({
   label,
   variant = "default",
   size = "default",
+  query = "",
 }: {
   topic: string;
   regenerate?: boolean;
@@ -38,6 +39,8 @@ export function GenerateButton({
   label?: string;
   variant?: "default" | "outline" | "secondary";
   size?: "default" | "sm" | "lg";
+  /** 生成完導回知識頁時保留的查詢字串（例如學習路線的 ?route=） */
+  query?: string;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -63,7 +66,7 @@ export function GenerateButton({
   }
 
   function goTo(targetSlug: string) {
-    router.push(`/knowledge/${encodeURIComponent(targetSlug)}`);
+    router.push(`/knowledge/${encodeURIComponent(targetSlug)}${query}`);
     router.refresh();
   }
 

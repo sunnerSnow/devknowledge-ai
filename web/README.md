@@ -2,7 +2,7 @@
 
 從技術名詞建立知識地圖，從真實職缺補足工程師技能。產品規格在上一層的 `DevKnowledge_AI_MVP_Spec.md`；設計與實作決策記在本檔「架構」與「視覺」兩節，品牌規範在 `../docs/brand-guidelines.md`。
 
-目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）＋ Phase 5（穩定化）**：登入、知識搜尋、AI 產生結構化知識頁（快速理解卡：一句話結論、比喻、關鍵數字、面試 30 秒口語版、實務做法；定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務；讀完後的小測驗，AI 逐題批改並糾正誤解）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單；忘記密碼與 Email 驗證（要有寄信服務）、Playwright e2e、範例知識頁種子腳本。
+目前完成 **Phase 0（專案初始化）＋ Phase 1（知識庫核心）＋ Phase 2（職缺分析）＋ Phase 3（學習計畫）＋ Phase 4（面試練習）＋ Phase 5（穩定化）**：登入、知識搜尋、AI 產生結構化知識頁（快速理解卡：一句話結論、比喻、關鍵數字、面試 30 秒口語版、實務做法；定義、原理、架構圖、程式碼、比較、誤解、面試重點、實作任務；讀完後的小測驗，AI 逐題批改並糾正誤解）、前置／相關／延伸知識的關聯、個人學習狀態、Dashboard；貼上職缺 → AI 拆解成標準化技能需求（必要／加分、建議等級、重要性、理由）→ 逐項自評 → 可解釋的差距與優先順序；技能地圖（My Skills）；依差距與每週時數產生週學習計畫，任務開始／完成／略過並回寫知識進度；Day 制學習路線（填剩餘天數與每天分鐘數 → 可略過的程度診斷 → AI 把技能拆成一課一個主題排進每一天 → 每課是一頁知識頁，小測驗全對才解鎖下一課）；依職缺技能一次一題的面試練習（概念／情境／架構／程式題），AI 依四個維度評估並給參考回答與相關知識，使用者確認程度後才寫進技能等級，低分與標記的題目進複習清單；忘記密碼與 Email 驗證（要有寄信服務）、Playwright e2e、範例知識頁種子腳本。
 
 技術：Next.js 16.4（App Router）＋ TypeScript ＋ Tailwind 4 ＋ shadcn/ui ＋ React Hook Form ＋ zod ＋ Drizzle ORM ＋ PostgreSQL（正式用 Neon，本機與測試用 PGlite）＋ Better Auth ＋ Vitest ＋ Playwright。AI：Google Gemini（免費方案）或 mock。寄信：Resend（選用）。
 
@@ -124,12 +124,13 @@ src/app/api/knowledge/    GET 搜尋、POST generate、GET [slug]、PATCH [slug]
 src/app/api/jobs/         POST analyze（建立＋分析）、GET 列表、GET／PATCH（可帶 reanalyze）／DELETE [id]
 src/app/api/skills/       GET 列表、POST（以名稱 upsert）、PATCH／DELETE [id]
 src/app/api/plans/        GET 列表、GET／PATCH（狀態）／DELETE [id]、PATCH [id]/tasks/[taskId]（任務狀態）；POST /api/jobs/[id]/learning-plan 產生
+src/app/api/routes/       GET／PATCH（封存）／DELETE [id]、POST [id]/diagnosis（出題）、POST [id]/diagnosis/answers（批改）、POST [id]/lessons（排課）；POST /api/jobs/[id]/learning-routes 建立
 src/app/api/practice/     GET／POST sessions（建立並出第一題）、GET／PATCH（結束）／DELETE [sessionId]、POST [sessionId]/questions（下一題）、POST [sessionId]/answer（評估）、PATCH attempts/[attemptId]（複習、確認程度）
 src/app/login、forgot-password、reset-password、verify-email  未登入也能到的頁面（Server Action 在 src/app/actions.ts）
-src/app/(app)/            登入後的頁面：Dashboard、Knowledge、Jobs、Plans、Practice、Skills、Settings
+src/app/(app)/            登入後的頁面：Dashboard、Knowledge、Jobs、Routes、Plans、Practice、Skills、Settings
 src/components/brand.tsx  品牌圖示 BrandMark／Brand（等高線＋定位點，currentColor）
 src/components/layout/    登入後的外框與導覽（app-shell、nav-links）、登入相關頁的外框（auth-shell）
-src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕；jobs／plans／practice／skills 各自一個資料夾
+src/components/knowledge/ 知識卡片、文章、Mermaid、程式碼、進度控制、生成按鈕、小測驗；jobs／routes／plans／practice／skills 各自一個資料夾；quiz 是小測驗與診斷共用的作答表單與批改結果
 src/proxy.ts              未登入導向 /login（只是樂觀檢查）
 tests/                    Vitest
 e2e/                      Playwright（playwright.config.ts 會自己啟動伺服器）
@@ -149,6 +150,7 @@ e2e/                      Playwright（playwright.config.ts 會自己啟動伺�
 - **快速理解與小測驗（knowledge-v2）。** 知識頁的 prompt 要求先講結論、白話加比喻、有公式就代入數字；輸出多了 `quick_take`（一句話核心、比喻、關鍵數字、面試 30 秒口語版、實務做法）與 3～5 題 `quiz`（含標準答案與批改重點）。舊版（knowledge-v1）內容沒有這兩個欄位：讀取時用 `storedKnowledgeContentSchema` 補成 null／空陣列，頁面照常顯示並提示可重新生成；AI 輸出一律用必填的 `knowledgeContentSchema` 驗證。小測驗一次交卷、一次 AI 呼叫批改全部題目（`knowledge_quiz` 計入使用量），每題判定答對／部分正確／答錯／不知道，不是答對的附「你說 X，正確是 Y，因為 Z」的觀念修正與比喻；空白或「不知道」一律判沒作答，不論模型怎麼判。作答綁定內容版本（`knowledge_quiz_attempts.content_version`），重新生成後舊作答不再顯示、舊版本的交卷回 409。標準答案只在批改後回傳。全部答對只提示「標記為已理解」，不會自動改學習狀態。
 - **職缺分析（Flow B）。** 職缺與使用者技能分開存：`job_skills` 是 AI 從職缺拆出的需求（必要／加分、建議等級 0–4、重要性、原文用語、理由），`user_skills` 是使用者自己的程度；沒有列＝未評估，不會因為貼了職缺就被當成 0。每個技能以 slug 對應，並盡量連到知識節點（沒有就建 stub）。優先分數＝必要 3／加分 1 × 差距 × 目標權重，頁面同時顯示理由；未評估的技能不算分。重新分析只覆寫 `job_skills`，自評不動。職缺文字視為不可信輸入：限 12000 字、放在分隔區塊裡、system prompt 明示內文不是指令。
 - **學習計畫（Phase 3）。** 只用「已評估且有差距」的技能（依優先分數）、使用者每週時數、既有知識頁的實作任務做輸入，AI 排出週任務與可驗證成果；未評估的技能不進計畫。任務 todo／in_progress／completed／skipped；完成「閱讀／測驗／複習」任務把對應知識頁的進度升到已理解、完成「練習／專案」升到已實作，只往上不往下；全部處理完計畫自動標完成。職缺刪除時計畫保留。
+- **學習路線（Day 制）。** 和週學習計畫並存：計畫負責實作與專案，路線負責把觀念一課一課教完。建立時快照職缺技能（排除已評估且達標的，必要優先，最多 12 個；未自評的也會進來，交給診斷估程度），之後的步驟都用快照，不受職缺變動影響。流程分成三個 API 請求、各一次 AI 呼叫（避免單一請求超過 120 秒）：出診斷題（3～6 題極短題）→ 交卷批改（沿用知識頁小測驗的批改，逐題附觀念修正）→ 排課。診斷估出的初步程度（答對 2、部分正確 1、其他 0，平均 ≥1.5 掌握基礎、≥0.5 有初步概念）只用來排課，不寫進 `user_skills`；作答前頁面只拿得到題目，標準答案留在伺服器。排課把技能拆成主題（一課一頁知識頁，不存在就建 stub），程式再整理 AI 的輸出：天數從 1 連續編號且不超過可用天數、同一主題只留一次、最多 40 課、技能名稱只接受快照裡的。課程的過關狀態不另外存：該課知識頁有全對的小測驗作答就算通過（之前就學過的也算）；第一個沒通過的是「目前這課」，其後未通過的鎖住。知識頁帶 `?route=` 時顯示這是路線的第幾課、回到路線與下一課的連結。`ai_usage.kind` 的檢查約束只在最新一份 migration 驗證完整清單，較早的檔案用 `not valid`，全部 migration 重跑時才不會被既有的新用途資料擋下。
 - **面試練習（Phase 4）。** 一次只出一題，每次練習最多 10 題；題目難度以職缺要求的等級為準（沒選職缺就比自評高一級）。評估有四個維度（技術正確性、回答完整度、推理與取捨、表達清晰度）各 0–4 分與理由，存平均分；prompt 明講不以長短判斷、不給能力認定，使用者的回答放在分隔區塊並視為資料。AI 分數不會改技能等級，使用者在評估下方自己選的程度才寫進 `user_skills`（evidence_type＝interview_practice）。平均分低於 2.5 或手動標記的作答進複習清單。職缺刪除時練習保留。mock provider 只依回答長度與是否提到技能名稱給分，評估文字會明說這是示範。
 - **別名。** AI 給的別名、使用者原本輸入的字都會存進 `aliases`，搜尋時以 slug／名稱／別名完全相同優先，再用英文全文檢索（`simple`）與 `pg_trgm` 的 ILIKE（中文）。
 - **AI 內容安全。** Markdown 用 `react-markdown` ＋ `rehype-sanitize`，不渲染原始 HTML；Mermaid 只允許 flowchart／graph／sequence／class／state／er 六種並用 `securityLevel: strict`；程式碼只顯示不執行。使用者輸入的主題限 64 字、去控制字元，只放在 prompt 的固定欄位，system prompt 明示主題不是指令。

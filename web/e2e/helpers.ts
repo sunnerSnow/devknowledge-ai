@@ -36,12 +36,19 @@ export async function ensureKnowledgePage(page: Page, topic: string, slug: strin
 }
 
 /** 新增一份職缺並等 AI（mock）分析完成，回傳職缺頁網址 */
-export async function createAnalyzedJob(page: Page, title = "Junior Full-Stack Engineer"): Promise<string> {
+export async function createAnalyzedJob(
+  page: Page,
+  title = "Junior Full-Stack Engineer",
+  content: { description: string[]; preferred: string } = {
+    description: ["使用 React / Next.js 開發前端", "使用 Node.js 建立 API", "操作 PostgreSQL", "使用 Git 進行版本控制", "了解 Docker 與雲端部署"],
+    preferred: "AWS 經驗、單元測試",
+  },
+): Promise<string> {
   await page.goto("/jobs/new");
   await page.getByLabel(/職缺名稱/).fill(title);
   await page.getByLabel(/公司名稱/).fill("範例公司");
-  await page.getByLabel(/工作內容/).fill(["使用 React / Next.js 開發前端", "使用 Node.js 建立 API", "操作 PostgreSQL", "使用 Git 進行版本控制", "了解 Docker 與雲端部署"].join("\n"));
-  await page.getByLabel(/加分技能/).fill("AWS 經驗、單元測試");
+  await page.getByLabel(/工作內容/).fill(content.description.join("\n"));
+  await page.getByLabel(/加分技能/).fill(content.preferred);
   await page.getByRole("button", { name: /儲存並用 AI 分析/ }).click();
   await page.waitForURL(/\/jobs\/[0-9a-f-]{36}$/);
   await expect(page.getByText("技能差距表")).toBeVisible();

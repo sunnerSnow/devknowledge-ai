@@ -20,7 +20,17 @@ export type RelationType = (typeof RELATION_TYPES)[number];
 export const PROGRESS_STATUSES = ["not_started", "learning", "understood", "implemented"] as const;
 export type ProgressStatus = (typeof PROGRESS_STATUSES)[number];
 
-export const AI_USAGE_KINDS = ["knowledge_generate", "knowledge_quiz", "job_analyze", "learning_plan", "practice_question", "practice_evaluate"] as const;
+export const AI_USAGE_KINDS = [
+  "knowledge_generate",
+  "knowledge_quiz",
+  "job_analyze",
+  "learning_plan",
+  "practice_question",
+  "practice_evaluate",
+  "route_diagnose",
+  "route_grade",
+  "learning_route",
+] as const;
 export type AiUsageKind = (typeof AI_USAGE_KINDS)[number];
 
 export const profiles = dk.table("profiles", {
@@ -214,6 +224,49 @@ export const learningTasks = dk.table("learning_tasks", {
 });
 
 // ---------------------------------------------------------------------------
+// 學習路線（Day 制）
+// ---------------------------------------------------------------------------
+
+export const ROUTE_STATUSES = ["draft", "active", "archived"] as const;
+export type RouteStatus = (typeof ROUTE_STATUSES)[number];
+
+export const learningRoutes = dk.table("learning_routes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  jobPostingId: uuid("job_posting_id"),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  days: integer("days").notNull(),
+  dailyMinutes: integer("daily_minutes").notNull(),
+  status: text("status", { enum: ROUTE_STATUSES }).notNull().default("draft"),
+  skills: jsonb("skills").notNull().default([]),
+  diagnosis: jsonb("diagnosis"),
+  diagnosisResult: jsonb("diagnosis_result"),
+  dayFocus: jsonb("day_focus").notNull().default([]),
+  notes: jsonb("notes").$type<string[]>().notNull().default([]),
+  provider: text("provider"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const learningRouteLessons = dk.table("learning_route_lessons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  routeId: uuid("route_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  knowledgeNodeId: uuid("knowledge_node_id"),
+  dayNumber: integer("day_number").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  topic: text("topic").notNull(),
+  skillName: text("skill_name"),
+  goal: text("goal"),
+  estimatedMinutes: integer("estimated_minutes").notNull(),
+  core: boolean("core").notNull().default(true),
+  createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
 // Phase 4：面試練習
 // ---------------------------------------------------------------------------
 
@@ -291,6 +344,8 @@ export const schema = {
   userSkills,
   learningPlans,
   learningTasks,
+  learningRoutes,
+  learningRouteLessons,
   practiceSessions,
   practiceQuestions,
   practiceAttempts,

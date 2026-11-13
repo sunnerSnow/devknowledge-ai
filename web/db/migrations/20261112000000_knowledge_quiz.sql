@@ -38,7 +38,9 @@ drop policy if exists knowledge_quiz_attempts_own on dk.knowledge_quiz_attempts;
 create policy knowledge_quiz_attempts_own on dk.knowledge_quiz_attempts for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
--- ai_usage.kind：init 的欄位 check 由 Postgres 命名為 ai_usage_kind_check；換成包含 knowledge_quiz 的版本
+-- ai_usage.kind：init 的欄位 check 由 Postgres 命名為 ai_usage_kind_check；換成包含 knowledge_quiz 的版本。
+-- not valid：migration 每次都會全部重跑，之後的檔案會再加新用途；資料庫裡已有新用途的資料時，
+-- 這裡若驗證既有資料就會失敗。完整清單由最新一份 migration 定義並驗證（20261113000000_learning_routes.sql）。
 alter table dk.ai_usage drop constraint if exists ai_usage_kind_check;
 alter table dk.ai_usage add constraint ai_usage_kind_check
-  check (kind in ('knowledge_generate', 'knowledge_quiz', 'job_analyze', 'learning_plan', 'practice_question', 'practice_evaluate'));
+  check (kind in ('knowledge_generate', 'knowledge_quiz', 'job_analyze', 'learning_plan', 'practice_question', 'practice_evaluate')) not valid;

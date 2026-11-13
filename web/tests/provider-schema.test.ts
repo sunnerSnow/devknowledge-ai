@@ -4,6 +4,7 @@ import { knowledgeJsonSchema } from "@/lib/ai/schemas/knowledge";
 import { quizGradeJsonSchema } from "@/lib/ai/schemas/knowledge-quiz";
 import { planJsonSchema } from "@/lib/ai/schemas/plan";
 import { practiceEvaluationJsonSchema, practiceQuestionJsonSchema } from "@/lib/ai/schemas/practice";
+import { routeDiagnosisJsonSchema, routePlanJsonSchema } from "@/lib/ai/schemas/route";
 
 /** 遞迴收集 schema 裡出現過的關鍵字 */
 function keywords(node: unknown, acc = new Set<string>()): Set<string> {
@@ -19,7 +20,16 @@ function keywords(node: unknown, acc = new Set<string>()): Set<string> {
 
 describe("給 provider 的 JSON Schema", () => {
   it("沒有 Gemini 會拒絕的關鍵字（maxItems、$schema、anyOf 的 null 寫法）", () => {
-    for (const schema of [knowledgeJsonSchema(), quizGradeJsonSchema(4), jobJsonSchema(), planJsonSchema(), practiceQuestionJsonSchema(), practiceEvaluationJsonSchema()]) {
+    for (const schema of [
+      knowledgeJsonSchema(),
+      quizGradeJsonSchema(4),
+      jobJsonSchema(),
+      planJsonSchema(),
+      practiceQuestionJsonSchema(),
+      practiceEvaluationJsonSchema(),
+      routeDiagnosisJsonSchema(),
+      routePlanJsonSchema(),
+    ]) {
       const keys = keywords(schema);
       expect(keys.has("maxItems")).toBe(false);
       expect(keys.has("$schema")).toBe(false);

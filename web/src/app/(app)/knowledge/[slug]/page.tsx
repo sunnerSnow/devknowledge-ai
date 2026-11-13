@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GenerateButton } from "@/components/knowledge/generate-button";
 import { GeneratingWatcher } from "@/components/knowledge/generating-watcher";
@@ -14,6 +15,8 @@ import { getDb } from "@/lib/db/client";
 import { AppError } from "@/lib/errors";
 import { getKnowledge, type KnowledgeDetail } from "@/lib/services/knowledge";
 import { getLatestQuizAttempt, type QuizAttemptView } from "@/lib/services/knowledge-quiz";
+import { getRouteContextForNode, type RouteLessonContext } from "@/lib/services/routes";
+import { isUuid } from "@/lib/db/with-user";
 
 async function load(slug: string): Promise<KnowledgeDetail | null> {
   const user = await requireUser();
@@ -38,10 +41,20 @@ export async function generateMetadata({ params }: PageProps<"/knowledge/[slug]"
   return { title: detail?.name ?? "知識頁" };
 }
 
-export default async function KnowledgeDetailPage({ params }: PageProps<"/knowledge/[slug]">) {
+/** 從學習路線點進來（?route=）：這一頁是路線的第幾課、下一課是什麼；路線不是自己的或這頁不在路線裡就不顯示 */
+async function loadRouteContext(routeParam: string | string[] | undefined, nodeId: string): Promise<RouteLessonContext | null> {
+  if (typeof routeParam !== "string" || !isUuid(routeParam)) return null;
+  const user = await requireUser();
+  return getRouteContextForNode(await getDb(), user.id, routeParam, nodeId);
+}
+
+export default async function KnowledgeDetailPage({ params, searchParams }: PageProps<"/knowledge/[slug]">) {
   const { slug } = await params;
+  const { route: routeParam } = await searchParams;
   const detail = await load(slug);
   if (!detail) notFound();
+  const routeCtx = await loadRouteContext(routeParam, detail.id);
+  const routeQuery = routeCtx ? `?route=${routeCtx.routeId}` : "";
 
   const updated = new Date(detail.contentMeta?.createdAt ?? detail.updatedAt).toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric" });
   const sections = detail.content ? articleSections(detail.content) : [];
@@ -58,12 +71,14 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
         questions={detail.content.quiz.map((q) => q.question)}
         initialAttempt={quizAttempt}
         progressStatus={progressStatus}
+        routeHref={routeCtx ? `/routes/${routeCtx.routeId}` : null}
       />
     ) : null;
 
   return (
     <div className="grid gap-12">
       <ViewTracker nodeId={detail.id} />
+      {routeCtx ? <RouteBanner ctx={routeCtx} quiz={!detail.content ? "no_content" : detail.content.quiz.length ? "ready" : "legacy"} /> : null}
       <header className="grid gap-6">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs tracking-[0.1em] text-muted-foreground">
           <CategoryBadge category={detail.category} />
@@ -80,7 +95,7 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
           <div className="flex flex-wrap items-center gap-3">
             {/* key：小測驗後按「標記為已理解」會 refresh，狀態改變時重新掛載才會顯示新狀態 */}
             {detail.content ? <ProgressControl key={progressStatus} nodeId={detail.id} slug={detail.slug} status={progressStatus} /> : <ProgressBadge status={detail.progress?.status} />}
-            {detail.content && !detail.generating ? <GenerateButton topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" /> : null}
+            {detail.content && !detail.generating ? <GenerateButton topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" query={routeQuery} /> : null}
           </div>
         </div>
         {detail.generating ? <GeneratingWatcher slug={detail.slug} /> : null}
@@ -118,13 +133,17 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
         <EmptyState
           title="上次生成失敗"
           description="AI 沒有回傳可用的內容。可以再試一次；若持續失敗，可能是額度或服務暫時有問題。"
-          action={<GenerateButton topic={detail.name} slug={detail.slug} label="再試一次" />}
+          action={<GenerateButton topic={detail.name} slug={detail.slug} label="再試一次" query={routeQuery} />}
         />
       ) : (
         <EmptyState
           title={`「${detail.name}」還沒有內容`}
-          description="這個節點是從其他知識頁的前置知識或相關技術建立的。用 AI 產生內容後，就會接上現有的知識關聯。"
-          action={<GenerateButton topic={detail.name} slug={detail.slug} size="lg" />}
+          description={
+            routeCtx
+              ? "這一課的知識頁還沒建立。用 AI 產生內容後，讀快速理解卡、做頁尾的小測驗，全對就會解鎖下一課。"
+              : "這個節點是從其他知識頁的前置知識或相關技術建立的。用 AI 產生內容後，就會接上現有的知識關聯。"
+          }
+          action={<GenerateButton topic={detail.name} slug={detail.slug} size="lg" query={routeQuery} />}
         />
       )}
 
@@ -134,6 +153,45 @@ export default async function KnowledgeDetailPage({ params }: PageProps<"/knowle
           <RelationsPanel detail={detail} />
         </section>
       ) : null}
+    </div>
+  );
+}
+
+/** 學習路線的提示列：第幾課、狀態、回到路線；通過後連到下一課 */
+function RouteBanner({ ctx, quiz }: { ctx: RouteLessonContext; quiz: "ready" | "legacy" | "no_content" }) {
+  const passed = ctx.lesson.state === "passed";
+  const nextHref = ctx.next?.knowledge && ctx.next.state !== "locked" ? `/knowledge/${encodeURIComponent(ctx.next.knowledge.slug)}?route=${ctx.routeId}` : null;
+  return (
+    <div className="flex flex-col gap-3 border border-primary bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 text-sm leading-7">
+        <p className="text-xs tracking-[0.12em] text-muted-foreground">
+          學習路線・DAY {String(ctx.lesson.dayNumber).padStart(2, "0")}・第 {ctx.lesson.index} / {ctx.total} 課
+        </p>
+        <p className="truncate font-medium tracking-[0.04em]">{ctx.title}</p>
+        <p className="text-xs leading-6 text-muted-foreground">
+          {passed
+            ? ctx.next
+              ? "這一課已通過。"
+              : "這是最後一課，已經全部通過。"
+            : ctx.lesson.state === "locked"
+              ? "這一課還沒解鎖，建議先完成前面的課程；已經會的話，直接做小測驗全對也算通過。"
+              : quiz === "no_content"
+                ? "先用 AI 建立這一課的知識頁，再讀快速理解卡、做頁尾的小測驗。"
+                : quiz === "ready"
+                  ? "讀完快速理解卡，做頁尾的小測驗；全部答對就解鎖下一課。"
+                  : "這一頁是舊版格式，還沒有小測驗：按「重新生成」更新成新版內容後才能測驗過關。"}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm tracking-[0.08em]">
+        <Link href={`/routes/${ctx.routeId}`} className="hover:dotted-underline">
+          ← 回到路線
+        </Link>
+        {passed && nextHref && ctx.next ? (
+          <Link href={nextHref} className="dotted-underline text-primary">
+            下一課：{ctx.next.topic} →
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { AppError } from "@/lib/errors";
 import { GeneratePlanButton } from "@/components/plans/generate-plan-button";
 import { ANALYSIS_ERROR_MESSAGES, getJob, type JobDetail } from "@/lib/services/jobs";
 import { listPlans } from "@/lib/services/plans";
+import { CreateRouteForm } from "@/components/routes/create-route-form";
+import { listRoutes, pickRouteSkills, ROUTE_STAGE_LABELS } from "@/lib/services/routes";
 
 const SENIORITY_LABELS: Record<string, string> = { intern: "實習", junior: "初階", mid: "中階", senior: "資深", lead: "主管／Lead", unknown: "資歷未標示" };
 
@@ -36,7 +38,10 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
   const { analysisError } = await searchParams;
   const job = await load(id);
   if (!job) notFound();
-  const plans = await listPlans(await getDb(), (await requireUser()).id, { jobId: job.id });
+  const userId = (await requireUser()).id;
+  const plans = await listPlans(await getDb(), userId, { jobId: job.id });
+  const routes = await listRoutes(await getDb(), userId, { jobId: job.id });
+  const routeSkillCount = pickRouteSkills(job.skills).length;
   // query string 只帶錯誤碼，訊息由伺服器端對照（不信任網址裡的文字）
   const failedMessage =
     typeof analysisError === "string" ? (Object.hasOwn(ANALYSIS_ERROR_MESSAGES, analysisError) ? ANALYSIS_ERROR_MESSAGES[analysisError] : ANALYSIS_ERROR_MESSAGES.internal_error) : null;
@@ -201,6 +206,34 @@ export default async function JobDetailPage({ params, searchParams }: PageProps<
                 label={plans.length ? "再產生一份計畫" : "產生學習計畫"}
                 disabledReason={job.learningOrder.length ? null : job.unassessedCount === job.skills.length ? "先自評才能產生計畫" : "沒有差距，不需要計畫"}
               />
+            </div>
+          </section>
+
+          {/* 學習路線（Day 制） */}
+          <section className="grid gap-5">
+            <SectionHeader eyebrow="學習路線" title="Routes" aside={<span className="text-muted-foreground">先診斷程度，再一天一兩課</span>} />
+            <div className="grid gap-6 panel p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+              <div className="grid content-start gap-3">
+                <p className="text-sm leading-7 text-foreground/85">
+                  把這份職缺的技能拆成一課一個主題，依剩餘天數排成 Day 1、Day 2…。每課是一頁知識頁（快速理解＋小測驗），全對才解鎖下一課。不用先自評，診斷會幫你估程度。
+                </p>
+                {routes.length ? (
+                  <ul className="grid gap-1 text-sm">
+                    {routes.map((r) => (
+                      <li key={r.id}>
+                        <Link href={`/routes/${r.id}`} className="hover:dotted-underline">
+                          {r.title}
+                        </Link>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {r.status === "archived" ? "已封存" : ROUTE_STAGE_LABELS[r.stage]}
+                          {r.totalLessons ? `・${r.passedLessons}/${r.totalLessons} 課` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+              <CreateRouteForm jobId={job.id} defaultDailyMinutes={60} disabledReason={routeSkillCount ? null : "已評估的技能都達到要求，沒有需要排進路線的技能"} />
             </div>
           </section>
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { KNOWLEDGE_QUIZ_PROMPT_VERSION, QUIZ_GRADE_SYSTEM_PROMPT, quizGradeRetryPrompt, quizGradeUserPrompt } from "@/lib/ai/prompts/knowledge-quiz-v1";
 import type { AiProvider } from "@/lib/ai/provider";
 import { QUIZ_MAX_QUESTIONS, type QuizQuestion, storedKnowledgeContentSchema } from "@/lib/ai/schemas/knowledge";
-import { type QuizGradeOutput, type QuizVerdict, quizGradeJsonSchema, quizGradeSchema } from "@/lib/ai/schemas/knowledge-quiz";
+import { type QuizVerdict, quizGradeJsonSchema, quizGradeSchema } from "@/lib/ai/schemas/knowledge-quiz";
 import { generateValidated } from "@/lib/ai/structured";
 import type { Db } from "@/lib/db/local";
 import { knowledgeContents, knowledgeNodes, knowledgeQuizAttempts } from "@/lib/db/schema";
@@ -71,6 +71,49 @@ export function isUnanswered(answer: string): boolean {
   return a === "" || UNKNOWN_RE.test(a);
 }
 
+export interface GradeOutcome {
+  items: QuizAttemptItem[];
+  summary: string;
+  model: string;
+  tokens: { inputTokens: number | null; outputTokens: number | null };
+}
+
+/**
+ * 批改一組題目（一次 AI 呼叫）：知識頁小測驗與學習路線的診斷共用。
+ * 使用量的記錄由呼叫端負責；空白或「不知道」一律算沒作答，不論模型怎麼判。
+ */
+export async function gradeAnswers(provider: AiProvider, topic: string, questions: QuizQuestion[], answers: string[]): Promise<GradeOutcome> {
+  const outcome = await generateValidated(provider, {
+    system: QUIZ_GRADE_SYSTEM_PROMPT,
+    user: quizGradeUserPrompt(
+      topic,
+      questions.map((q, i) => ({ question: q.question, answer: q.answer, keyPoints: q.key_points, userAnswer: answers[i].trim() || "不知道" })),
+    ),
+    schema: quizGradeSchema(questions.length),
+    jsonSchema: quizGradeJsonSchema(questions.length),
+    retryPrompt: quizGradeRetryPrompt,
+    maxOutputTokens: 4096,
+    kind: "knowledge_quiz",
+    hint: topic,
+  });
+  const items: QuizAttemptItem[] = questions.map((q, i) => {
+    const r = outcome.data.results[i];
+    const verdict: QuizVerdict = isUnanswered(answers[i]) ? "unanswered" : r.verdict;
+    const correct = verdict === "correct";
+    return {
+      question: q.question,
+      userAnswer: answers[i].trim(),
+      verdict,
+      reason: r.reason,
+      correction: correct ? null : r.correction || null,
+      analogy: correct ? null : r.analogy || null,
+      answer: q.answer,
+      keyPoints: q.key_points,
+    };
+  });
+  return { items, summary: outcome.data.summary, model: outcome.model, tokens: outcome.tokens };
+}
+
 /** 依 slug 或 UUID 找節點與最新內容的小測驗 */
 async function loadQuiz(db: Db, userId: string, slugOrId: string): Promise<{ nodeId: string; name: string; version: number; quiz: QuizQuestion[] }> {
   const key = slugOrId.trim();
@@ -111,44 +154,17 @@ export async function gradeQuiz(db: Db, userId: string, slugOrId: string, input:
     return startUsage(tx, userId, "knowledge_quiz", deps.provider.name, deps.provider.model);
   });
 
-  let outcome: Awaited<ReturnType<typeof generateValidated<QuizGradeOutput>>>;
+  let graded: GradeOutcome;
   try {
-    outcome = await generateValidated(deps.provider, {
-      system: QUIZ_GRADE_SYSTEM_PROMPT,
-      user: quizGradeUserPrompt(
-        quiz.name,
-        quiz.quiz.map((q, i) => ({ question: q.question, answer: q.answer, keyPoints: q.key_points, userAnswer: answers[i].trim() || "不知道" })),
-      ),
-      schema: quizGradeSchema(quiz.quiz.length),
-      jsonSchema: quizGradeJsonSchema(quiz.quiz.length),
-      retryPrompt: quizGradeRetryPrompt,
-      maxOutputTokens: 4096,
-      kind: "knowledge_quiz",
-      hint: quiz.name,
-    });
+    graded = await gradeAnswers(deps.provider, quiz.name, quiz.quiz, answers);
   } catch (error) {
     await withService(db, (tx) => finishUsage(tx, userId, usageId, { status: "failed" })).catch(() => {});
     throw error;
   }
 
-  const items: QuizAttemptItem[] = quiz.quiz.map((q, i) => {
-    const r = outcome.data.results[i];
-    // 空白或「不知道」一律算沒作答，不論模型怎麼判
-    const verdict: QuizVerdict = isUnanswered(answers[i]) ? "unanswered" : r.verdict;
-    const correct = verdict === "correct";
-    return {
-      question: q.question,
-      userAnswer: answers[i].trim(),
-      verdict,
-      reason: r.reason,
-      correction: correct ? null : r.correction || null,
-      analogy: correct ? null : r.analogy || null,
-      answer: q.answer,
-      keyPoints: q.key_points,
-    };
-  });
+  const { items } = graded;
   const correctCount = items.filter((it) => it.verdict === "correct").length;
-  const result: StoredQuizResult = { summary: outcome.data.summary, items };
+  const result: StoredQuizResult = { summary: graded.summary, items };
 
   let row: typeof knowledgeQuizAttempts.$inferSelect;
   try {
@@ -165,7 +181,7 @@ export async function gradeQuiz(db: Db, userId: string, slugOrId: string, input:
           totalCount: items.length,
           passed: correctCount === items.length,
           provider: deps.provider.name,
-          modelName: outcome.model,
+          modelName: graded.model,
           promptVersion: KNOWLEDGE_QUIZ_PROMPT_VERSION,
         })
         .returning();
@@ -175,7 +191,7 @@ export async function gradeQuiz(db: Db, userId: string, slugOrId: string, input:
     await withService(db, (tx) => finishUsage(tx, userId, usageId, { status: "failed" })).catch(() => {});
     throw error;
   }
-  await withService(db, (tx) => finishUsage(tx, userId, usageId, { status: "succeeded", modelName: outcome.model, ...outcome.tokens }));
+  await withService(db, (tx) => finishUsage(tx, userId, usageId, { status: "succeeded", modelName: graded.model, ...graded.tokens }));
   return toView(row);
 }
 

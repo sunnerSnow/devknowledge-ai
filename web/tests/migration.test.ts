@@ -19,6 +19,8 @@ describe("migration", () => {
       "knowledge_quiz_attempts",
       "knowledge_relations",
       "learning_plans",
+      "learning_route_lessons",
+      "learning_routes",
       "learning_tasks",
       "practice_attempts",
       "practice_questions",
@@ -30,6 +32,26 @@ describe("migration", () => {
     ]);
     const authTables = await client.query<{ table_name: string }>("select table_name from information_schema.tables where table_schema = 'auth' order by 1");
     expect(authTables.rows.map((r) => r.table_name)).toEqual(["accounts", "sessions", "users", "verifications"]);
+    await client.close();
+  });
+
+  it("資料庫已有新用途的 AI 使用紀錄時，全部 migration 重跑仍會成功；舊的用途清單不會擋下新用途", async () => {
+    const client = createPGlite();
+    await bootstrapLocal(client);
+    const userId = "00000000-0000-4000-8000-000000000001";
+    await client.query("insert into auth.users (id, name, email) values ($1, 'x', 'x@example.test')", [userId]);
+    await client.query("insert into dk.profiles (id) values ($1)", [userId]);
+    for (const kind of ["knowledge_quiz", "route_diagnose", "route_grade", "learning_route"]) {
+      await client.query("insert into dk.ai_usage (user_id, kind, provider) values ($1, $2, 'mock')", [userId, kind]);
+    }
+    await bootstrapLocal(client);
+    const checks = await client.query<{ def: string }>(
+      "select pg_get_constraintdef(oid) def from pg_constraint where conrelid = 'dk.ai_usage'::regclass and conname = 'ai_usage_kind_check'",
+    );
+    expect(checks.rows).toHaveLength(1);
+    expect(checks.rows[0].def).toContain("learning_route");
+    expect(checks.rows[0].def).not.toMatch(/NOT VALID/i);
+    await expect(client.query("insert into dk.ai_usage (user_id, kind, provider) values ($1, 'bogus', 'mock')", [userId])).rejects.toThrow(/check constraint/i);
     await client.close();
   });
 

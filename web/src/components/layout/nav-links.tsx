@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Top", hint: "總覽" },
   { href: "/knowledge", label: "Knowledge", hint: "知識探索" },
   { href: "/jobs", label: "Jobs", hint: "職缺分析" },
+  { href: "/routes", label: "Routes", hint: "學習路線" },
   { href: "/plans", label: "Plans", hint: "學習計畫" },
   { href: "/practice", label: "Practice", hint: "面試練習" },
   { href: "/skills", label: "Skills", hint: "技能地圖" },
