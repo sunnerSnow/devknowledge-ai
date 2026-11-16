@@ -63,4 +63,16 @@ test.describe("知識庫（Flow A）", () => {
     await page.getByRole("button", { name: "標記為已理解" }).click();
     await expect(page.getByRole("radio", { name: "已理解" })).toHaveAttribute("aria-checked", "true");
   });
+
+  test("重新生成：完成後顯示新版本，按鈕回到可以再按的狀態", async ({ page }) => {
+    await loginAsDemo(page, "A");
+    await ensureKnowledgePage(page, "Redis", "redis");
+    await expect(page.getByText("v1", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "重新生成" }).click();
+    await expect(page.getByText("v2", { exact: true })).toBeVisible();
+    // 導回的是同一頁：按鈕不能一直停在「生成中…」
+    await expect(page.getByRole("button", { name: "重新生成" })).toBeEnabled();
+    await expect(page.getByText(/重新生成中/)).toHaveCount(0);
+  });
 });

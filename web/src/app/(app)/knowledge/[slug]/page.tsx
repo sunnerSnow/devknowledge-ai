@@ -95,7 +95,10 @@ export default async function KnowledgeDetailPage({ params, searchParams }: Page
           <div className="flex flex-wrap items-center gap-3">
             {/* key：小測驗後按「標記為已理解」會 refresh，狀態改變時重新掛載才會顯示新狀態 */}
             {detail.content ? <ProgressControl key={progressStatus} nodeId={detail.id} slug={detail.slug} status={progressStatus} /> : <ProgressBadge status={detail.progress?.status} />}
-            {detail.content && !detail.generating ? <GenerateButton topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" query={routeQuery} /> : null}
+            {/* key：重新生成完導回的是同一頁，元件不會重新掛載；版本變了就重新掛載，按鈕才會離開「生成中…」 */}
+            {detail.content && !detail.generating ? (
+              <GenerateButton key={detail.contentMeta?.version} topic={detail.name} slug={detail.slug} regenerate variant="outline" size="sm" query={routeQuery} />
+            ) : null}
           </div>
         </div>
         {detail.generating ? <GeneratingWatcher slug={detail.slug} /> : null}
